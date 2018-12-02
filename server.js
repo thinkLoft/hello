@@ -1,11 +1,11 @@
-var express = require("express");
-var logger = require("morgan");
-var mongoose = require("mongoose");
+const express = require("express");
+const routes = require("./routes");
+const mongoose = require("mongoose");
 const CronJob = require("cron").CronJob;
-var axios = require("axios");
-var cheerio = require("cheerio");
-var fs = require("fs");
-var request = require("request");
+const axios = require("axios");
+const cheerio = require("cheerio");
+const fs = require("fs");
+const request = require("request");
 const app = express();
 const PORT = process.env.PORT || 3001;
 
@@ -16,6 +16,9 @@ app.use(express.json());
 if (process.env.NODE_ENV === "production") {
   app.use(express.static("client/build"));
 }
+
+// Add routes, both API and view
+app.use(routes);
 
 // Use morgan logger for logging requests
 app.use(logger("dev"));
