@@ -32,26 +32,12 @@ module.exports = router;
 // ======= Functions ========
 // ==========================
 
-// CHECK IF URL IS IN DATABASE
-function checkDB(result) {
-  db.Post.find({ srcURL: result.srcURL }, function(err, docs) {
-    if (docs.length) {
-      // no ad found
-    } else {
-      console.log("Ad Found!");
-      db.Post.create(result).catch(function(err) {
-        console.log(err);
-      });
-    }
-  });
-}
-
-// CHECKS AUTO ADS FOR LATEST ADS
+// CHECKS AUTO ADS RSS FOR LATEST ADS
 function autoAdsRss() {
   axios.get("https://www.autoadsja.com/rss.asp").then(function(response) {
     // Then, we load that into cheerio and save it to $ for a shorthand selector
     var $ = cheerio.load(response.data, { xmlMode: true });
-    var ans = [];
+
     $("item").each(function(i, element) {
       var result = {};
 
@@ -65,19 +51,27 @@ function autoAdsRss() {
       result.srcImg = $(this)
         .children("description")
         .text();
-      ans.push(result);
 
       // Check
-      checkDB(result);
+      db.Post.find({ srcURL: result.srcURL }, function(err, docs) {
+        if (docs.length) {
+          // no ad found
+        } else {
+          console.log("Ad Found!");
+          db.Post.create(result).catch(function(err) {
+            console.log(err);
+          });
+        }
+      });
     });
 
     return "Grabbed Latest Auto Ads RSS";
   });
 }
 
+// AUTOADS SCRAPER
 function autoAdsScraper(link) {
   axios.get(link).then(function(response) {
-    console.log(response.data.url);
     // Then, we load that into cheerio and save it to $ for a shorthand selector
     var $ = cheerio.load(response.data);
 
@@ -96,7 +90,10 @@ function autoAdsScraper(link) {
     var year = ymm[0];
     var make = ymm[1];
     var modelIndex = title.indexOf(make) + make.length + 1;
-    var model = title.substring(modelIndex).replace(/\$.*/g, "");
+    var model = title
+      .substring(modelIndex)
+      .trim()
+      .replace(/\$.*/g, "");
 
     var location = $(".per-detail > ul > li")[0]
       .children[0].data.replace("Location: ", "")
@@ -132,6 +129,8 @@ function autoAdsScraper(link) {
     });
 
     // Update Results object
+    var srclink = response.config.url;
+
     result.title = title;
     result.price = price;
     result.year = year;
@@ -143,5 +142,9 @@ function autoAdsScraper(link) {
     result.imgs = imgs;
     result.price = price;
     result.posted = false;
+
+    db.Post.findOneAndUpdate({ srcURL: srclink }, result).catch(err =>
+      res.status(422).json(err)
+    );
   });
 }
