@@ -2,47 +2,65 @@ const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
 
 var postSchema = new Schema({
+  srcURL: {
+    type: String,
+    required: true
+  },
+  srcTitle: {
+    type: String,
+    required: false
+  },
+  srcImg: {
+    type: String,
+    required: false
+  },
   postTitle: {
     type: String,
-    required: true
+    required: false
   },
-
   description: {
     type: String,
-    required: true
+    required: false
   },
-
   imgs: {
     type: Array,
-    required: true
+    required: false
   },
   price: {
     type: Number,
-    required: true
+    required: false
   },
   contactNumber: {
     type: Number,
-    required: true
+    required: false
   },
   year: {
     type: Number,
-    required: true
+    required: false
   },
   make: {
     type: String,
-    require: true
+    require: false
   },
   model: {
     type: String,
-    require: true
+    require: false
   },
   parish: {
     type: String,
-    require: true
+    require: false
+  },
+  scraped: {
+    type: Boolean,
+    require: false
   },
   posted: {
     type: Boolean,
     require: false
+  },
+  postURL: {
+    type: String,
+    required: false
   }
 });
 

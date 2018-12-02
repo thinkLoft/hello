@@ -4,6 +4,7 @@ const mongoose = require("mongoose");
 const CronJob = require("cron").CronJob;
 const axios = require("axios");
 const cheerio = require("cheerio");
+var logger = require("morgan");
 const fs = require("fs");
 const request = require("request");
 const app = express();
