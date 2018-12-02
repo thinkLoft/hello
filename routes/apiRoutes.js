@@ -15,6 +15,8 @@ router.get("/unscrapedAds", function(req, res) {
   db.Post.find({ postTitle: undefined })
     .then(function(post) {
       post.forEach(function(i, element) {
+        console.log("ad scraped");
+        console.log(i.srcURL);
         autoAdsScraper(i.srcURL);
       });
 
@@ -22,7 +24,7 @@ router.get("/unscrapedAds", function(req, res) {
     })
     .catch(function(err) {
       // If an error occurred, send it to the client
-      res.json(err);
+      res.send(err);
     });
 });
 
@@ -64,8 +66,6 @@ function autoAdsRss() {
         }
       });
     });
-
-    return "Grabbed Latest Auto Ads RSS";
   });
 }
 
@@ -92,8 +92,8 @@ function autoAdsScraper(link) {
     var modelIndex = title.indexOf(make) + make.length + 1;
     var model = title
       .substring(modelIndex)
-      .trim()
-      .replace(/\$.*/g, "");
+      .replace(/\-.*/g, "")
+      .trim();
 
     var location = $(".per-detail > ul > li")[0]
       .children[0].data.replace("Location: ", "")
@@ -131,7 +131,7 @@ function autoAdsScraper(link) {
     // Update Results object
     var srclink = response.config.url;
 
-    result.title = title;
+    result.postTitle = title;
     result.price = price;
     result.year = year;
     result.make = make;
@@ -144,7 +144,7 @@ function autoAdsScraper(link) {
     result.posted = false;
 
     db.Post.findOneAndUpdate({ srcURL: srclink }, result).catch(err =>
-      res.status(422).json(err)
+      console.log(err)
     );
   });
 }
