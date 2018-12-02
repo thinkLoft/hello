@@ -1,14 +1,17 @@
 const express = require("express");
-const routes = require("./routes");
+
 const mongoose = require("mongoose");
 const CronJob = require("cron").CronJob;
-const axios = require("axios");
-const cheerio = require("cheerio");
+
 var logger = require("morgan");
 const fs = require("fs");
 const request = require("request");
 const app = express();
 const PORT = process.env.PORT || 3001;
+
+// define Routes
+const routes = require("./routes");
+const apiRoutes = require("./routes/apiRoutes");
 
 // Define middleware here
 app.use(express.urlencoded({ extended: true }));
@@ -19,6 +22,7 @@ if (process.env.NODE_ENV === "production") {
 }
 
 // Add routes, both API and view
+app.use("/api", apiRoutes);
 app.use(routes);
 
 // Use morgan logger for logging requests
