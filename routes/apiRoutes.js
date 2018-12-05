@@ -1,3 +1,6 @@
+// ==========================
+// ========= Config =========
+// ==========================
 const axios = require("axios");
 const cheerio = require("cheerio");
 const router = require("express").Router();
@@ -5,6 +8,12 @@ const router = require("express").Router();
 // Require all models
 const db = require("../models");
 
+// Puppeteer Broswer
+const puppeteer = require("puppeteer");
+
+// ==========================
+// ======== Routes ==========
+// ==========================
 // // Route for getting all Articles from the db
 router.get("/autoAdsRss", async function(req, res) {
   var ret = await checker();
@@ -12,23 +21,21 @@ router.get("/autoAdsRss", async function(req, res) {
 });
 
 router.get("/unscrapedAds", function(req, res) {
-  var ret = await verify()
-  await res.send(ret)
+  var ret = verify();
+  res.send(ret);
 });
 
 module.exports = router;
 
 // ==========================
-// ======= Functions ========
+// ========== APP ===========
 // ==========================
 
-// AUTOADS CHECKER
+// AUTOADS RSS CHECKER
 function checker() {
   axios.get("https://www.autoadsja.com/rss.asp").then(function(response) {
     // Then, we load that into cheerio and save it to $ for a shorthand selector
     var $ = cheerio.load(response.data, { xmlMode: true });
-
-    var count = "hello";
 
     $("item").each(function(i, element) {
       var result = {};
@@ -57,15 +64,14 @@ function checker() {
       });
       // end post function
     });
-
     // end each function
   });
   // end of axios function
   return "hello from getAutoAdsLinks function";
 }
 
-// AUTOADS VERIFIER
-function verify(){
+// A - AUTOADS RSS VERIFIER
+function verify() {
   db.Post.find({ postTitle: undefined })
     .then(function(post) {
       post.forEach(function(i, element) {
@@ -82,7 +88,22 @@ function verify(){
     });
 }
 
-// AUTOADS SCRAPER
+// A1 - AUTOADS POST VERIFIER
+function ifPosted() {
+  db.Post.find({ posted: false }).then(async function(res) {
+    for (let i of res) {
+      console.time("asyncPoster");
+      await asyncPoster(i);
+      console.timeEnd("asyncPoster");
+    }
+    console.log(res.length);
+  });
+}
+
+// ================================================================TEMP LAUNCHER
+ifPosted();
+
+// B - AUTOADS SCRAPER
 function scraper(link) {
   axios.get(link).then(function(response) {
     // Then, we load that into cheerio and save it to $ for a shorthand selector
@@ -101,7 +122,7 @@ function scraper(link) {
 
     var ymm = title.split(" "); // break Title into array of text
     var year = ymm[0];
-    var make = ymm[1];
+    var make = ymm[1].replace(/\-.*/g, "").trim();
     var modelIndex = title.indexOf(make) + make.length + 1;
     var model = title
       .substring(modelIndex)
@@ -160,6 +181,112 @@ function scraper(link) {
       console.log(err)
     );
   });
-
   return "hello from the crawler";
+  // end of crawler
+}
+
+// C - AUTOADS POSTER
+async function asyncPoster(res) {
+  // lOGIN
+  var user = {
+    username: "automater",
+    password: "llipDR3x8S2DUHAnyo"
+  };
+
+  // find first 4 letters of make to use on the dropdown
+  // compensates for misspelt Makes
+  const makeFirstFour = res.make.substring(0, 4);
+
+  await console.log(res.postTitle);
+
+  // Launch Browser
+  const browser = await puppeteer.launch({
+    headless: false,
+    timeout: 150000,
+    networkIdleTimout: 150000
+  });
+
+  // Load Initial Page
+  const page = await browser.newPage();
+  page.setDefaultNavigationTimeout(240000);
+  await page.goto("https://doubleupja.com/create-listing/");
+
+  // Login Page
+  await page.evaluate(user => {
+    $("#login_username").val(user.username);
+    $("#login_password").val(user.password);
+    $("#login").click();
+  }, user);
+  await page.waitForNavigation();
+
+  // Category Page
+  await page.focus("#ad_cat_id");
+  await page.keyboard.press("ArrowDown", { delay: 50 });
+  await page.evaluate(() => {
+    $("form#mainform").submit();
+  });
+  await page.waitForNavigation();
+
+  // Ad Listing Page
+  // - Select Browser Uploader
+  await page.click(".upload-flash-bypass > a");
+
+  // - Fill out Form
+  await page.type("#cp_make", res.make.substring(0, 4));
+  await page.evaluate(res => {
+    $("#cp_contact_number").val(res.contactNumber);
+    $("#cp_price").val(res.price);
+    $("#cp_year").val(res.year);
+    $("#cp_model").val(res.model.replace(/\-.*/g, "").trim());
+
+    $("#cp_region").val(res.parish);
+    $("#post_title").val(res.postTitle);
+    $("#post_content").val(res.description);
+  }, res);
+
+  // Process Images
+  // await processImgs(i);  // Turn off process imageds TEMP======================
+
+  // Submit button after allow image processing
+  // await setTimeout(async function() {
+  // await page.evaluate(() => {
+  //   $("form#mainform").submit();
+  // });
+  // // }, 3000);
+  // await page.waitForNavigation();
+
+  // // Confirmation Page
+  // await page.evaluate(() => {
+  //   $("form#mainform").submit();
+  // });
+  // await page.waitForNavigation();
+
+  // // Close Browser
+  // await browser.close();
+
+  // End of aysncPoster
+}
+
+// C1 - IMAGE DOWNLOADER
+function download(uri, filename, callback) {
+  request.head(uri, function(err, res, body) {
+    request(uri)
+      .pipe(fs.createWriteStream(filename))
+      .on("close", callback);
+  });
+}
+
+// C2 - IMAGE PROCESSOR
+async function processImgs(i) {
+  for (let e of i.imgs) {
+    var uploadbtn = "#upload_" + count + " > input";
+    var filename = "images/";
+    filename += e.replace("https://www.autoadsja.com/vehicleimages/", "");
+    await download(e, filename, async function() {});
+
+    const fileInput = await page.$(uploadbtn);
+    await fileInput.uploadFile(filename);
+
+    count++;
+  }
 }
