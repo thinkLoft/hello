@@ -91,7 +91,10 @@ function verify() {
 // A1 - AUTOADS POST VERIFIER
 function ifPosted() {
   db.Post.find({ posted: false }).then(async function(res) {
+    count = 0;
     for (let i of res) {
+      count++;
+      console.log("---:" + count);
       console.time("asyncPoster");
       await asyncPoster(i);
       console.timeEnd("asyncPoster");
@@ -99,9 +102,6 @@ function ifPosted() {
     console.log(res.length);
   });
 }
-
-// ================================================================TEMP LAUNCHER
-ifPosted();
 
 // B - AUTOADS SCRAPER
 function scraper(link) {
@@ -187,83 +187,115 @@ function scraper(link) {
 
 // C - AUTOADS POSTER
 async function asyncPoster(res) {
-  // lOGIN
-  var user = {
-    username: "automater",
-    password: "llipDR3x8S2DUHAnyo"
-  };
+  // check if response has missing values and skips
+  if (
+    res.contactNumber === null ||
+    res.year === null ||
+    res.make === null ||
+    res.model === null ||
+    res.price === null ||
+    res.parish === null ||
+    res.postTitle === null
+  ) {
+    console.log(res.postTitle + " - missing values");
+  } else {
+    // lOGIN
+    var user = {
+      username: "automater",
+      password: "llipDR3x8S2DUHAnyo"
+    };
 
-  // find first 4 letters of make to use on the dropdown
-  // compensates for misspelt Makes
-  const makeFirstFour = res.make.substring(0, 4);
+    // Launch Browser
+    const browser = await puppeteer.launch({
+      headless: true,
+      timeout: 60000,
+      networkIdleTimout: 60000
+    });
 
-  await console.log(res.postTitle);
+    // Load Initial Page
+    const page = await browser.newPage();
+    page.setDefaultNavigationTimeout(60000);
+    await page.goto("https://doubleupja.com/create-listing/");
 
-  // Launch Browser
-  const browser = await puppeteer.launch({
-    headless: false,
-    timeout: 150000,
-    networkIdleTimout: 150000
-  });
+    // Login Page
+    await page.evaluate(user => {
+      $("#login_username").val(user.username);
+      $("#login_password").val(user.password);
+      $("#login").click();
+    }, user);
+    await page.waitForNavigation();
 
-  // Load Initial Page
-  const page = await browser.newPage();
-  page.setDefaultNavigationTimeout(240000);
-  await page.goto("https://doubleupja.com/create-listing/");
+    // Category Page
+    await page.focus("#ad_cat_id");
+    await page.keyboard.press("ArrowDown", { delay: 50 });
+    await page.evaluate(() => {
+      $("form#mainform").submit();
+    });
+    await page.waitForNavigation();
 
-  // Login Page
-  await page.evaluate(user => {
-    $("#login_username").val(user.username);
-    $("#login_password").val(user.password);
-    $("#login").click();
-  }, user);
-  await page.waitForNavigation();
+    // Ad Listing Page
+    // - Select Browser Uploader
+    await page.click(".upload-flash-bypass > a");
 
-  // Category Page
-  await page.focus("#ad_cat_id");
-  await page.keyboard.press("ArrowDown", { delay: 50 });
-  await page.evaluate(() => {
-    $("form#mainform").submit();
-  });
-  await page.waitForNavigation();
+    // - Fill out Form
+    await page.type("#cp_make", res.make.substring(0, 4));
+    await page.evaluate(res => {
+      $("#cp_contact_number").val(res.contactNumber);
+      $("#cp_price").val(res.price);
+      $("#cp_year").val(res.year);
+      $("#cp_model").val(res.model.replace(/\-.*/g, "").trim());
 
-  // Ad Listing Page
-  // - Select Browser Uploader
-  await page.click(".upload-flash-bypass > a");
+      $("#cp_region").val(res.parish);
+      $("#post_title").val(res.postTitle);
+      $("#post_content").val(res.description);
+    }, res);
 
-  // - Fill out Form
-  await page.type("#cp_make", res.make.substring(0, 4));
-  await page.evaluate(res => {
-    $("#cp_contact_number").val(res.contactNumber);
-    $("#cp_price").val(res.price);
-    $("#cp_year").val(res.year);
-    $("#cp_model").val(res.model.replace(/\-.*/g, "").trim());
+    // IMAGE PROCESSOR
+    async function processImgs(i) {
+      for (let e of i.imgs) {
+        var uploadbtn = "#upload_" + count + " > input";
+        var filename = "images/";
+        filename += e.replace("https://www.autoadsja.com/vehicleimages/", "");
+        await download(e, filename, async function() {});
 
-    $("#cp_region").val(res.parish);
-    $("#post_title").val(res.postTitle);
-    $("#post_content").val(res.description);
-  }, res);
+        const fileInput = await page.$(uploadbtn);
+        await fileInput.uploadFile(filename);
 
-  // Process Images
-  // await processImgs(i);  // Turn off process imageds TEMP======================
+        count++;
+      }
+    }
 
-  // Submit button after allow image processing
-  // await setTimeout(async function() {
-  // await page.evaluate(() => {
-  //   $("form#mainform").submit();
-  // });
-  // // }, 3000);
-  // await page.waitForNavigation();
+    // Process Images
+    // await processImgs(i);  // Turn off process imageds TEMP======================
 
-  // // Confirmation Page
-  // await page.evaluate(() => {
-  //   $("form#mainform").submit();
-  // });
-  // await page.waitForNavigation();
+    // // Submit button after allow image processing
+    await setTimeout(async function() {
+      await page.evaluate(() => {
+        $("form#mainform").submit();
+      });
+    }, 500);
+    await page.waitForNavigation();
 
-  // // Close Browser
-  // await browser.close();
+    // Confirmation Page
+    await setTimeout(async function() {
+      await page.evaluate(() => {
+        $("form#mainform").submit();
+      });
+    }, 500);
+    await page.waitForNavigation();
 
+    // Close Browser
+    await browser.close();
+
+    // Update File in DB
+    await db.Post.findOneAndUpdate(
+      { srcURL: res.srcURL },
+      { $set: { posted: true } }
+    ).catch(err => console.log(err));
+
+    await console.log(res.postTitle);
+    // End of Else Statement
+  }
   // End of aysncPoster
 }
 
@@ -276,17 +308,5 @@ function download(uri, filename, callback) {
   });
 }
 
-// C2 - IMAGE PROCESSOR
-async function processImgs(i) {
-  for (let e of i.imgs) {
-    var uploadbtn = "#upload_" + count + " > input";
-    var filename = "images/";
-    filename += e.replace("https://www.autoadsja.com/vehicleimages/", "");
-    await download(e, filename, async function() {});
-
-    const fileInput = await page.$(uploadbtn);
-    await fileInput.uploadFile(filename);
-
-    count++;
-  }
-}
+// ================================================================TEMP LAUNCHER
+ifPosted();
