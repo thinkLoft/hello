@@ -6,26 +6,14 @@ const router = require("express").Router();
 const db = require("../models");
 
 // // Route for getting all Articles from the db
-router.get("/autoAdsRss", function(req, res) {
-  autoAdsRss();
-  res.send("complete");
+router.get("/autoAdsRss", async function(req, res) {
+  var ret = await checker();
+  await res.send(ret);
 });
 
 router.get("/unscrapedAds", function(req, res) {
-  db.Post.find({ postTitle: undefined })
-    .then(function(post) {
-      post.forEach(function(i, element) {
-        console.log("ad scraped");
-        console.log(i.srcURL);
-        autoAdsScraper(i.srcURL);
-      });
-
-      res.send("Scrape Successful");
-    })
-    .catch(function(err) {
-      // If an error occurred, send it to the client
-      res.send(err);
-    });
+  var ret = await verify()
+  await res.send(ret)
 });
 
 module.exports = router;
@@ -34,11 +22,13 @@ module.exports = router;
 // ======= Functions ========
 // ==========================
 
-// CHECKS AUTO ADS RSS FOR LATEST ADS
-function autoAdsRss() {
+// AUTOADS CHECKER
+function checker() {
   axios.get("https://www.autoadsja.com/rss.asp").then(function(response) {
     // Then, we load that into cheerio and save it to $ for a shorthand selector
     var $ = cheerio.load(response.data, { xmlMode: true });
+
+    var count = "hello";
 
     $("item").each(function(i, element) {
       var result = {};
@@ -65,12 +55,35 @@ function autoAdsRss() {
           });
         }
       });
+      // end post function
     });
+
+    // end each function
   });
+  // end of axios function
+  return "hello from getAutoAdsLinks function";
+}
+
+// AUTOADS VERIFIER
+function verify(){
+  db.Post.find({ postTitle: undefined })
+    .then(function(post) {
+      post.forEach(function(i, element) {
+        console.log("ad scraped");
+        console.log(i.srcURL);
+        scraper(i.srcURL);
+      });
+
+      res.send("Verification complete");
+    })
+    .catch(function(err) {
+      // If an error occurred, send it to the client
+      res.send(err);
+    });
 }
 
 // AUTOADS SCRAPER
-function autoAdsScraper(link) {
+function scraper(link) {
   axios.get(link).then(function(response) {
     // Then, we load that into cheerio and save it to $ for a shorthand selector
     var $ = cheerio.load(response.data);
@@ -147,4 +160,6 @@ function autoAdsScraper(link) {
       console.log(err)
     );
   });
+
+  return "hello from the crawler";
 }
