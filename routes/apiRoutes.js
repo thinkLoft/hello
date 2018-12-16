@@ -1,9 +1,14 @@
 // ==========================
 // ========= Config =========
 // ==========================
+const router = require("express").Router();
+// Tools
 const axios = require("axios");
 const cheerio = require("cheerio");
-const router = require("express").Router();
+
+// File Handlers
+var fs = require("fs");
+var request = require("request");
 
 // Require all models
 const db = require("../models");
@@ -15,13 +20,18 @@ const puppeteer = require("puppeteer");
 // ======== Routes ==========
 // ==========================
 // // Route for getting all Articles from the db
-router.get("/autoAdsRss", async function(req, res) {
+router.get("/crawl", async function(req, res) {
   var ret = await checker();
   await res.send(ret);
 });
 
-router.get("/unscrapedAds", function(req, res) {
+router.get("/scrape", function(req, res) {
   var ret = verify();
+  res.send(ret);
+});
+
+router.get("/post", function(req, res) {
+  var ret = ifPosted();
   res.send(ret);
 });
 
@@ -31,7 +41,7 @@ module.exports = router;
 // ========== APP ===========
 // ==========================
 
-// AUTOADS RSS CHECKER
+// A - AUTOADS RSS CHECKER
 function checker() {
   axios.get("https://www.autoadsja.com/rss.asp").then(function(response) {
     // Then, we load that into cheerio and save it to $ for a shorthand selector
@@ -70,7 +80,7 @@ function checker() {
   return "hello from getAutoAdsLinks function";
 }
 
-// A - AUTOADS RSS VERIFIER
+// A1 - AUTOADS RSS VERIFIER
 function verify() {
   db.Post.find({ postTitle: undefined })
     .then(function(post) {
@@ -80,7 +90,7 @@ function verify() {
         scraper(i.srcURL);
       });
 
-      res.send("Verification complete");
+      return "Verification complete";
     })
     .catch(function(err) {
       // If an error occurred, send it to the client
@@ -88,7 +98,7 @@ function verify() {
     });
 }
 
-// A1 - AUTOADS POST VERIFIER
+// A2 - AUTOADS POST VERIFIER
 function ifPosted() {
   db.Post.find({ posted: false }).then(async function(res) {
     count = 0;
@@ -285,7 +295,9 @@ async function asyncPoster(res) {
     await page.waitForNavigation();
 
     // Close Browser
-    await browser.close();
+    await setTimeout(async function() {
+      await browser.close();
+    }, 500);
 
     // Update File in DB
     await db.Post.findOneAndUpdate(
@@ -308,5 +320,128 @@ function download(uri, filename, callback) {
   });
 }
 
+// D - CLASSIPRESS AUTO ADS POSTER
+async function classiPoster() {
+  // lOGIN
+  var user = {
+    username: "autoadsja",
+    password: "llipDR3x8S2DUHAnyo"
+  };
+
+  // Launch Browser
+  const browser = await puppeteer.launch({
+    headless: false,
+    timeout: 60000,
+    networkIdleTimout: 60000
+  });
+
+  // Load Initial Page
+  const page = await browser.newPage();
+  page.setDefaultNavigationTimeout(60000);
+  await page.goto("https://inhouse.thinkloft.ca/create-listing/");
+
+  // Login Page
+  await page.evaluate(user => {
+    document.getElementById("login_username").value = user.username;
+    document.getElementById("login_password").value = user.password;
+    document.getElementById("login").click();
+  }, user);
+  await page.waitForNavigation();
+
+  // Category Page
+  await page.focus("#ad_cat_id");
+  await page.keyboard.press("ArrowDown", { delay: 50 });
+  await page.evaluate(() => {
+    document.getElementById("getcat").click();
+  });
+  await page.waitForNavigation();
+
+  // Ad Listing Page
+  // - Select Browser Uploader
+  await page.click(".upload-flash-bypass > a");
+
+  // - Fill out Form
+  await page.type("#cp_make", "Acur");
+  await page.evaluate(() => {
+    document.getElementById("cp_phone").value = "1555555555";
+    document.getElementById("cp_price").value = "1234";
+    document.getElementById("cp_year").value = "1990";
+    document.getElementById("cp_model").value = "Acura";
+    document.getElementById("cp_region").value = "Portland";
+    document.getElementById("post_title").value = "This is the best post ever";
+    document.getElementById("post_content").value =
+      "This is the best post ever";
+  });
+
+  var i = {};
+  i.imgs = [
+    "https://www.autoadsja.com/vehicleimages/TV64U69R.jpg",
+    "https://www.autoadsja.com/vehicleimages/919EU69R.jpg",
+    "https://www.autoadsja.com/vehicleimages/TD39U69R.jpg",
+    "https://www.autoadsja.com/vehicleimages/U4L9U69R.jpg",
+    "https://www.autoadsja.com/vehicleimages/S8DTU69R.jpg"
+  ];
+
+  // IMAGE PROCESSOR
+  // var count = 0;
+  // const input = await page.$(".fileupload");
+
+  // for (let e of i.imgs) {
+  //   var filename = "images/";
+  //   filename += e.replace("https://www.autoadsja.com/vehicleimages/", "");
+  //   download(e, filename, async function() {});
+  //   console.log(input);
+  //   input.attachfile(filename);
+
+  //   count++;
+  // }
+
+  // await page.evaluate(i => {
+  //   const fileInputs = document.getElementsByClassName("fileupload");
+  //   console.log(fileInputs);
+  //   var count = 0;
+
+  //   for (let e of i.imgs) {
+  //     var filename = "images/";
+  //     filename += e.replace("https://www.autoadsja.com/vehicleimages/", "");
+  //     // fileInputs[count].uploadFile(filename);
+
+  //     count++;
+  //   }
+  // }, i);
+
+  // // Submit button after allow image processing
+  await setTimeout(async function() {
+    await page.evaluate(() => {
+      document.getElementById("mainform").submit();
+    });
+  }, 500);
+  await page.waitForNavigation();
+
+  // Confirmation Page
+  await setTimeout(async function() {
+    await page.evaluate(() => {
+      document.getElementById("mainform").submit();
+    });
+  }, 500);
+  await page.waitForNavigation();
+
+  // Close Browser
+  await setTimeout(async function() {
+    await browser.close();
+  }, 500);
+
+  // Update File in DB
+  // await db.Post.findOneAndUpdate(
+  //   { srcURL: res.srcURL },
+  //   { $set: { posted: true } }
+  // ).catch(err => console.log(err));
+
+  await console.log("This done");
+  // End of Else Statement
+}
+// End of aysncPoster
+
 // ================================================================TEMP LAUNCHER
 ifPosted();
+// classiPoster();
