@@ -9,6 +9,7 @@ const cheerio = require("cheerio");
 // File Handlers
 var fs = require("fs");
 var request = require("request");
+var Json2csvParser = require("json2csv").Parser;
 
 // Require all models
 const db = require("../models");
@@ -440,8 +441,43 @@ async function classiPoster() {
   await console.log("This done");
   // End of Else Statement
 }
-// End of aysncPoster
+
+// D - CSV CREATOR
+function csvExporter() {
+  db.Post.find()
+    .then(function(res) {
+      var fields = [
+        "_id",
+        "postTitle",
+        "year",
+        "make",
+        "model",
+        "price",
+        "parish",
+        "description",
+        "contactNumber",
+        "imgs[0]",
+        "imgs[1]",
+        "imgs[2]",
+        "imgs[3]",
+        "imgs[4]",
+        "imgs[5]",
+        "imgs[6]",
+        "imgs[7]",
+        "imgs[8]"
+      ];
+      var json2csvParser = new Json2csvParser({ fields });
+      var csv = json2csvParser.parse(res);
+      fs.writeFile("csvExport.csv", csv, function(err) {
+        if (err) {
+          return console.log(err);
+        }
+      });
+    })
+    .catch(err => res.status(422).json(err));
+}
 
 // ================================================================TEMP LAUNCHER
-ifPosted();
+// ifPosted();
+csvExporter();
 // classiPoster();
