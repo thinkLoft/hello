@@ -62,3 +62,6 @@ typings/
 
 # yarn lock
 .lock
+
+# images
+images/
