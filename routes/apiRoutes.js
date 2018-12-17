@@ -478,6 +478,6 @@ function csvExporter() {
 }
 
 // ================================================================TEMP LAUNCHER
-// ifPosted();
-csvExporter();
+ifPosted();
+// csvExporter();
 // classiPoster();
