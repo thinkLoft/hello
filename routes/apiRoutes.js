@@ -5,6 +5,7 @@ const router = require("express").Router();
 // Tools
 const axios = require("axios");
 const cheerio = require("cheerio");
+const CronJob = require("cron").CronJob;
 
 // File Handlers
 var fs = require("fs");
@@ -34,6 +35,16 @@ router.get("/scrape", function(req, res) {
 router.get("/post", function(req, res) {
   var ret = ifPosted();
   res.send(ret);
+});
+
+router.get("/csv", function(req, res) {
+  var ret = csvExporter();
+  res.send(ret);
+});
+
+router.get("/cron", function(req, res) {
+  job.start();
+  res.send("Job Started");
 });
 
 module.exports = router;
@@ -90,13 +101,13 @@ function verify() {
         console.log(i.srcURL);
         scraper(i.srcURL);
       });
-
-      return "Verification complete";
     })
     .catch(function(err) {
       // If an error occurred, send it to the client
       res.send(err);
     });
+
+  return "Verification complete";
 }
 
 // A2 - AUTOADS POST VERIFIER
@@ -478,6 +489,12 @@ function csvExporter() {
 }
 
 // ================================================================TEMP LAUNCHER
-ifPosted();
+// ifPosted();
 // csvExporter();
 // classiPoster();
+const job = new CronJob("0 */5 * * * *", async function() {
+  await checker();
+  await verify();
+  await csvExporter();
+  console.log("Cron Run");
+});
