@@ -7,16 +7,8 @@ const axios = require("axios");
 const cheerio = require("cheerio");
 const CronJob = require("cron").CronJob;
 
-// File Handlers
-var fs = require("fs");
-var request = require("request");
-var Json2csvParser = require("json2csv").Parser;
-
 // Require all models
 const db = require("../models");
-
-// Puppeteer Broswer
-const puppeteer = require("puppeteer");
 
 // ==========================
 // ======== Routes ==========
@@ -24,7 +16,7 @@ const puppeteer = require("puppeteer");
 // // Route for getting all Articles from the db
 router.get("/crawl", async function(req, res) {
   var ret = await checker();
-  await res.send(ret);
+  res.send(ret);
 });
 
 router.get("/scrape", function(req, res) {
@@ -37,14 +29,9 @@ router.get("/post", function(req, res) {
   res.send(ret);
 });
 
-router.get("/csv", function(req, res) {
-  var ret = csvExporter();
-  res.send(ret);
-});
-
 router.get("/cron", function(req, res) {
   job.start();
-  res.send("Job Started");
+  res.send("Cron Started");
 });
 
 module.exports = router;
@@ -125,7 +112,7 @@ function ifPosted() {
   });
 }
 
-// B - AUTOADS SCRAPER
+// B - SCRAPER: AUTOADS
 function scraper(link) {
   axios.get(link).then(function(response) {
     // Then, we load that into cheerio and save it to $ for a shorthand selector
@@ -207,294 +194,15 @@ function scraper(link) {
   // end of crawler
 }
 
-// C - AUTOADS POSTER
-async function asyncPoster(res) {
-  // check if response has missing values and skips
-  if (
-    res.contactNumber === null ||
-    res.year === null ||
-    res.make === null ||
-    res.model === null ||
-    res.price === null ||
-    res.parish === null ||
-    res.postTitle === null
-  ) {
-    console.log(res.postTitle + " - missing values");
-  } else {
-    // lOGIN
-    var user = {
-      username: "automater",
-      password: "llipDR3x8S2DUHAnyo"
-    };
-
-    // Launch Browser
-    const browser = await puppeteer.launch({
-      headless: true,
-      timeout: 60000,
-      networkIdleTimout: 60000
-    });
-
-    // Load Initial Page
-    const page = await browser.newPage();
-    page.setDefaultNavigationTimeout(60000);
-    await page.goto("https://doubleupja.com/create-listing/");
-
-    // Login Page
-    await page.evaluate(user => {
-      $("#login_username").val(user.username);
-      $("#login_password").val(user.password);
-      $("#login").click();
-    }, user);
-    await page.waitForNavigation();
-
-    // Category Page
-    await page.focus("#ad_cat_id");
-    await page.keyboard.press("ArrowDown", { delay: 50 });
-    await page.evaluate(() => {
-      $("form#mainform").submit();
-    });
-    await page.waitForNavigation();
-
-    // Ad Listing Page
-    // - Select Browser Uploader
-    await page.click(".upload-flash-bypass > a");
-
-    // - Fill out Form
-    await page.type("#cp_make", res.make.substring(0, 4));
-    await page.evaluate(res => {
-      $("#cp_contact_number").val(res.contactNumber);
-      $("#cp_price").val(res.price);
-      $("#cp_year").val(res.year);
-      $("#cp_model").val(res.model.replace(/\-.*/g, "").trim());
-
-      $("#cp_region").val(res.parish);
-      $("#post_title").val(res.postTitle);
-      $("#post_content").val(res.description);
-    }, res);
-
-    // IMAGE PROCESSOR
-    async function processImgs(i) {
-      for (let e of i.imgs) {
-        var uploadbtn = "#upload_" + count + " > input";
-        var filename = "images/";
-        filename += e.replace("https://www.autoadsja.com/vehicleimages/", "");
-        await download(e, filename, async function() {});
-
-        const fileInput = await page.$(uploadbtn);
-        await fileInput.uploadFile(filename);
-
-        count++;
-      }
-    }
-
-    // Process Images
-    // await processImgs(i);  // Turn off process imageds TEMP======================
-
-    // // Submit button after allow image processing
-    await setTimeout(async function() {
-      await page.evaluate(() => {
-        $("form#mainform").submit();
-      });
-    }, 500);
-    await page.waitForNavigation();
-
-    // Confirmation Page
-    await setTimeout(async function() {
-      await page.evaluate(() => {
-        $("form#mainform").submit();
-      });
-    }, 500);
-    await page.waitForNavigation();
-
-    // Close Browser
-    await setTimeout(async function() {
-      await browser.close();
-    }, 500);
-
-    // Update File in DB
-    await db.Post.findOneAndUpdate(
-      { srcURL: res.srcURL },
-      { $set: { posted: true } }
-    ).catch(err => console.log(err));
-
-    await console.log(res.postTitle);
-    // End of Else Statement
-  }
-  // End of aysncPoster
-}
-
-// C1 - IMAGE DOWNLOADER
-function download(uri, filename, callback) {
-  request.head(uri, function(err, res, body) {
-    request(uri)
-      .pipe(fs.createWriteStream(filename))
-      .on("close", callback);
-  });
-}
-
-// D - CLASSIPRESS AUTO ADS POSTER
-async function classiPoster() {
-  // lOGIN
-  var user = {
-    username: "autoadsja",
-    password: "llipDR3x8S2DUHAnyo"
-  };
-
-  // Launch Browser
-  const browser = await puppeteer.launch({
-    headless: false,
-    timeout: 60000,
-    networkIdleTimout: 60000
-  });
-
-  // Load Initial Page
-  const page = await browser.newPage();
-  page.setDefaultNavigationTimeout(60000);
-  await page.goto("https://inhouse.thinkloft.ca/create-listing/");
-
-  // Login Page
-  await page.evaluate(user => {
-    document.getElementById("login_username").value = user.username;
-    document.getElementById("login_password").value = user.password;
-    document.getElementById("login").click();
-  }, user);
-  await page.waitForNavigation();
-
-  // Category Page
-  await page.focus("#ad_cat_id");
-  await page.keyboard.press("ArrowDown", { delay: 50 });
-  await page.evaluate(() => {
-    document.getElementById("getcat").click();
-  });
-  await page.waitForNavigation();
-
-  // Ad Listing Page
-  // - Select Browser Uploader
-  await page.click(".upload-flash-bypass > a");
-
-  // - Fill out Form
-  await page.type("#cp_make", "Acur");
-  await page.evaluate(() => {
-    document.getElementById("cp_phone").value = "1555555555";
-    document.getElementById("cp_price").value = "1234";
-    document.getElementById("cp_year").value = "1990";
-    document.getElementById("cp_model").value = "Acura";
-    document.getElementById("cp_region").value = "Portland";
-    document.getElementById("post_title").value = "This is the best post ever";
-    document.getElementById("post_content").value =
-      "This is the best post ever";
-  });
-
-  var i = {};
-  i.imgs = [
-    "https://www.autoadsja.com/vehicleimages/TV64U69R.jpg",
-    "https://www.autoadsja.com/vehicleimages/919EU69R.jpg",
-    "https://www.autoadsja.com/vehicleimages/TD39U69R.jpg",
-    "https://www.autoadsja.com/vehicleimages/U4L9U69R.jpg",
-    "https://www.autoadsja.com/vehicleimages/S8DTU69R.jpg"
-  ];
-
-  // IMAGE PROCESSOR
-  // var count = 0;
-  // const input = await page.$(".fileupload");
-
-  // for (let e of i.imgs) {
-  //   var filename = "images/";
-  //   filename += e.replace("https://www.autoadsja.com/vehicleimages/", "");
-  //   download(e, filename, async function() {});
-  //   console.log(input);
-  //   input.attachfile(filename);
-
-  //   count++;
-  // }
-
-  // await page.evaluate(i => {
-  //   const fileInputs = document.getElementsByClassName("fileupload");
-  //   console.log(fileInputs);
-  //   var count = 0;
-
-  //   for (let e of i.imgs) {
-  //     var filename = "images/";
-  //     filename += e.replace("https://www.autoadsja.com/vehicleimages/", "");
-  //     // fileInputs[count].uploadFile(filename);
-
-  //     count++;
-  //   }
-  // }, i);
-
-  // // Submit button after allow image processing
-  await setTimeout(async function() {
-    await page.evaluate(() => {
-      document.getElementById("mainform").submit();
-    });
-  }, 500);
-  await page.waitForNavigation();
-
-  // Confirmation Page
-  await setTimeout(async function() {
-    await page.evaluate(() => {
-      document.getElementById("mainform").submit();
-    });
-  }, 500);
-  await page.waitForNavigation();
-
-  // Close Browser
-  await setTimeout(async function() {
-    await browser.close();
-  }, 500);
-
-  // Update File in DB
-  // await db.Post.findOneAndUpdate(
-  //   { srcURL: res.srcURL },
-  //   { $set: { posted: true } }
-  // ).catch(err => console.log(err));
-
-  await console.log("This done");
-  // End of Else Statement
-}
-
-// D - CSV CREATOR
-function csvExporter() {
-  db.Post.find()
-    .then(function(res) {
-      var fields = [
-        "_id",
-        "postTitle",
-        "year",
-        "make",
-        "model",
-        "price",
-        "parish",
-        "description",
-        "contactNumber",
-        "imgs[0]",
-        "imgs[1]",
-        "imgs[2]",
-        "imgs[3]",
-        "imgs[4]",
-        "imgs[5]",
-        "imgs[6]",
-        "imgs[7]",
-        "imgs[8]"
-      ];
-      var json2csvParser = new Json2csvParser({ fields });
-      var csv = json2csvParser.parse(res);
-      fs.writeFile("csvExport.csv", csv, function(err) {
-        if (err) {
-          return console.log(err);
-        }
-      });
-    })
-    .catch(err => res.status(422).json(err));
-}
-
-// ================================================================TEMP LAUNCHER
-// ifPosted();
-// csvExporter();
-// classiPoster();
+// C - Scheduler
 const job = new CronJob("0 */5 * * * *", async function() {
-  await checker();
+  await setTimeout(async function() {
+    await checker();
+  }, 5000);
+
   await verify();
-  await csvExporter();
   console.log("Cron Run");
 });
+
+// LAUNCHER
+job.start();
