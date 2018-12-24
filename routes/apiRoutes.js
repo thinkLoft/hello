@@ -55,7 +55,7 @@ function checker() {
         if (docs.length) {
           // no ad found
         } else {
-          console.log("Ad Found!");
+          console.log("Ad Found: " + result.srcURL);
           scraper(result.srcURL);
         }
       });
@@ -155,38 +155,85 @@ const job = new CronJob("0 */15 * * * *", async function() {
 
 // D - SCRAPER: Jamiaca Cars
 function pageScraper(link) {
-  axios.get(link).then(function(response) {
-    // Then, we load that into cheerio and save it to $ for a shorthand selector
-    var $ = cheerio.load(response.data);
+  axios
+    .get("https://www.jacars.net/?page=browse&e=AddedThisWeek&p=1")
+    .then(function(response) {
+      // Then, we load that into cheerio and save it to $ for a shorthand selector
+      var $ = cheerio.load(response.data);
 
-    // page Crawler
-    $(".hiddenInfo").each(function(i, element) {
-      // Save an empty result object
-      var result = {};
+      // page Crawler
+      $(".hiddenInfo").each(function(i, element) {
+        // Save an empty result object
+        var result = {};
 
-      result.srcURL = $(this)
-        .children("a")
-        .attr("href");
+        //  Data Cleanup
 
-      // Update Results object
-      var srclink = response.config.url;
+        var year = $(this)
+          .children("div")
+          .children(".results-year")
+          .text()
+          .trim();
 
-      // result.postTitle = title;
-      // result.price = price;
-      // result.year = year;
-      // result.make = make;
-      // result.model = model;
-      // result.parish = location;
-      // result.contactNumber = contact;
-      // result.description = description;
-      // result.imgs = imgs;
-      // result.price = price;
-      result.posted = false;
-      console.log(result);
+        var tempTitle = $(this)
+          .children("div")
+          .children("a")
+          .children("div")
+          .text()
+          .split(" ");
+
+        var make = tempTitle[0].trim();
+
+        tempTitle.shift(); // Removes first entry (make) from array of words from title
+
+        var model = tempTitle.join(" ").trim(); // Join the remaining array entries to create the model
+
+        var dirtyPrice = $(this)
+          .children("div")
+          .children(".results-priceE")
+          .text()
+          .trim();
+
+        var price = dirtyPrice.replace(/[^0-9.-]+/g, "").trim();
+
+        var postTitle = year + " " + make + " " + model + " - " + dirtyPrice;
+
+        var descArr = [];
+
+        $(this)
+          .children("div")
+          .children(".results-lable")
+          .each(function() {
+            descArr.push(
+              $(this)
+                .text()
+                .trim()
+            );
+          });
+
+        descArr.shift();
+        descArr.shift();
+        description = descArr.join("\n");
+
+        // ================
+        // Update Results object
+        result.srcURL = $(this)
+          .children("a")
+          .attr("href");
+        result.postTitle = postTitle;
+        result.price = price;
+        result.year = year;
+        result.make = make;
+        result.model = model;
+        // result.parish = location;
+        // result.contactNumber = contact;
+        result.description = description;
+        // result.imgs = imgs;
+        // result.price = price;
+        result.posted = false;
+        console.log(result);
+      });
     });
-  });
 
-  return 1;
   // end of crawler
 }
 
@@ -209,4 +256,4 @@ function pageCrawler() {
 }
 
 // TEMP LAUNCHER
-// pageCrawler();
+pageScraper("hello");
