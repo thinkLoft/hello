@@ -212,7 +212,39 @@ function pageScraper(link) {
 
         descArr.shift();
         descArr.shift();
+
         description = descArr.join("\n");
+
+        //Contact Number parsers
+        contactNumberArray = description.match(/Tel:(\W+(\d+))-(\d+)/g);
+
+        contactNumber = contactNumberArray[0].replace(/[^0-9]+/g, "");
+
+        //Location parser
+        parishArr = [
+          "Clarendon",
+          "Manchester",
+          "Westmoreland",
+          "Kingston",
+          "Saint Catherine",
+          "Portland",
+          "Hanover",
+          "Saint Andrew",
+          "Saint Ann",
+          "Saint Thomas",
+          "Saint Elizabeth",
+          "Saint James",
+          "Saint Mary",
+          "Trelawny"
+        ];
+
+        var parish = "";
+
+        parishArr.forEach(function(element, i) {
+          if (description.match(element) !== null) {
+            parish = description.match(element)[0];
+          }
+        });
 
         // ================
         // Update Results object
@@ -224,21 +256,20 @@ function pageScraper(link) {
         result.year = year;
         result.make = make;
         result.model = model;
-        // result.parish = location;
-        // result.contactNumber = contact;
+        result.parish = parish;
+        result.contactNumber = contactNumber;
         result.description = description;
         // result.imgs = imgs;
-        // result.price = price;
         result.posted = false;
         console.log(result);
+
+        // create new row in database
+        // db.Post.create(result).catch(err => console.log(err));
       });
     });
-
+  return "return from scraper";
   // end of crawler
 }
-
-// LAUNCHER
-job.start();
 
 // Crawler - Jamaica Cars
 function pageCrawler() {
@@ -255,5 +286,10 @@ function pageCrawler() {
   }
 }
 
+// LAUNCHER
+job.start();
+
 // TEMP LAUNCHER
-pageScraper("hello");
+// pageCrawler()
+
+pageScraper();
