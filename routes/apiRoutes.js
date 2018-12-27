@@ -154,119 +154,134 @@ const job = new CronJob("0 */15 * * * *", async function() {
 });
 
 // D - SCRAPER: Jamiaca Cars
-function pageScraper(link) {
-  axios
-    .get("https://www.jacars.net/?page=browse&e=AddedThisWeek&p=1")
-    .then(function(response) {
-      // Then, we load that into cheerio and save it to $ for a shorthand selector
-      var $ = cheerio.load(response.data);
+function pageScraper(element) {
+  axios.get(element).then(function(response) {
+    // Then, we load that into cheerio and save it to $ for a shorthand selector
+    var $ = cheerio.load(response.data);
 
-      // page Crawler
-      $(".hiddenInfo").each(function(i, element) {
-        // Save an empty result object
-        var result = {};
+    // page Crawler
+    $(".hiddenInfo").each(function(i, element) {
+      // grab sc URL
+      var srcURL = $(this)
+        .children("a")
+        .attr("href");
 
-        //  Data Cleanup
+      // Save an empty result object
+      var result = {};
 
-        var year = $(this)
-          .children("div")
-          .children(".results-year")
-          .text()
-          .trim();
+      //  Data Cleanup
+      var year = $(this)
+        .children("div")
+        .children(".results-year")
+        .text()
+        .trim();
 
-        var tempTitle = $(this)
-          .children("div")
-          .children("a")
-          .children("div")
-          .text()
-          .split(" ");
+      var tempTitle = $(this)
+        .children("div")
+        .children("a")
+        .children("div")
+        .text()
+        .split(" ");
 
-        var make = tempTitle[0].trim();
+      var make = tempTitle[0].trim();
 
-        tempTitle.shift(); // Removes first entry (make) from array of words from title
+      tempTitle.shift(); // Removes first entry (make) from array of words from title
 
-        var model = tempTitle.join(" ").trim(); // Join the remaining array entries to create the model
+      var model = tempTitle.join(" ").trim(); // Join the remaining array entries to create the model
 
-        var dirtyPrice = $(this)
-          .children("div")
-          .children(".results-priceE")
-          .text()
-          .trim();
+      var dirtyPrice = $(this)
+        .children("div")
+        .children(".results-priceE")
+        .text()
+        .trim();
 
-        var price = dirtyPrice.replace(/[^0-9.-]+/g, "").trim();
+      var price = dirtyPrice.replace(/[^0-9.-]+/g, "").trim();
 
-        var postTitle = year + " " + make + " " + model + " - " + dirtyPrice;
+      var postTitle = year + " " + make + " " + model + " - " + dirtyPrice;
 
-        var descArr = [];
+      var descArr = [];
 
-        $(this)
-          .children("div")
-          .children(".results-lable")
-          .each(function() {
-            descArr.push(
-              $(this)
-                .text()
-                .trim()
-            );
-          });
-
-        descArr.shift();
-        descArr.shift();
-
-        description = descArr.join("\n");
-
-        //Contact Number parsers
-        contactNumberArray = description.match(/Tel:(\W+(\d+))-(\d+)/g);
-
-        contactNumber = contactNumberArray[0].replace(/[^0-9]+/g, "");
-
-        //Location parser
-        parishArr = [
-          "Clarendon",
-          "Manchester",
-          "Westmoreland",
-          "Kingston",
-          "Saint Catherine",
-          "Portland",
-          "Hanover",
-          "Saint Andrew",
-          "Saint Ann",
-          "Saint Thomas",
-          "Saint Elizabeth",
-          "Saint James",
-          "Saint Mary",
-          "Trelawny"
-        ];
-
-        var parish = "";
-
-        parishArr.forEach(function(element, i) {
-          if (description.match(element) !== null) {
-            parish = description.match(element)[0];
-          }
+      $(this)
+        .children("div")
+        .children(".results-lable")
+        .each(function() {
+          descArr.push(
+            $(this)
+              .text()
+              .trim()
+          );
         });
 
-        // ================
-        // Update Results object
-        result.srcURL = $(this)
-          .children("a")
-          .attr("href");
-        result.postTitle = postTitle;
-        result.price = price;
-        result.year = year;
-        result.make = make;
-        result.model = model;
-        result.parish = parish;
-        result.contactNumber = contactNumber;
-        result.description = description;
-        // result.imgs = imgs;
-        result.posted = false;
-        console.log(result);
+      descArr.shift();
+      descArr.shift();
 
-        // create new row in database
-        // db.Post.create(result).catch(err => console.log(err));
+      description = descArr.join("\n");
+
+      //Contact Number parsers
+      contactNumberArray = description.match(/Tel:(\W+(\d+))-(\d+)/g);
+
+      contactNumber = contactNumberArray[0].replace(/[^0-9]+/g, "");
+
+      //Location parser
+      parishArr = [
+        "Clarendon",
+        "Manchester",
+        "Westmoreland",
+        "Kingston",
+        "Saint Catherine",
+        "Portland",
+        "Hanover",
+        "Saint Andrew",
+        "Saint Ann",
+        "Saint Thomas",
+        "Saint Elizabeth",
+        "Saint James",
+        "Saint Mary",
+        "Trelawny"
+      ];
+
+      var parish = "";
+
+      parishArr.forEach(function(element, i) {
+        if (description.match(element) !== null) {
+          parish = description.match(element)[0];
+        }
       });
+
+      // ================
+      // Update Results object
+      result.srcURL = srcURL;
+      result.postTitle = postTitle;
+      result.price = price;
+      result.year = year;
+      result.make = make;
+      result.model = model;
+      result.parish = parish;
+      result.contactNumber = contactNumber;
+      result.description = description;
+      // result.imgs = imgs;
+      result.posted = false;
+
+      // Check if ad Exists in DB
+      db.Post.find({ srcURL: result.srcURL }, function(err, docs) {
+        if (docs.length) {
+          console.log("no ad found");
+        } else {
+          console.log("ad Found");
+          console.log(result);
+
+          // Image Scraper
+          axios.get(result.srcURL).then(function(response) {
+            var $ = cheerio.load(response.data);
+          });
+          // create new row in database
+          // db.Post.create(result).catch(err => console.log(err));
+          //   });
+          // });
+        }
+      }); // end db check
     });
+  });
   return "return from scraper";
   // end of crawler
 }
@@ -279,17 +294,16 @@ function pageCrawler() {
   var targetURL = baseURL + count;
 
   // Only scrapes first 10 pages
-  while (count < 10) {
+  while (count < 1) {
+    // =======================change to 10
     count++;
     targetURL = baseURL + count;
     pageScraper(targetURL);
-  }
-}
+  } //end while function
+} // end main function
 
 // LAUNCHER
 job.start();
 
 // TEMP LAUNCHER
-// pageCrawler()
-
-pageScraper();
+pageCrawler();
