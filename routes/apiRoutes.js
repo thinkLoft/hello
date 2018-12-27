@@ -31,6 +31,7 @@ module.exports = router;
 // ==========================
 
 // A - AUTOADS RSS CHECKER
+// =====================================
 function checker() {
   axios.get("https://www.autoadsja.com/rss.asp").then(function(response) {
     // Then, we load that into cheerio and save it to $ for a shorthand selector
@@ -68,6 +69,7 @@ function checker() {
 }
 
 // B - SCRAPER: AUTOADS
+// =====================================
 function scraper(link) {
   axios.get(link).then(function(response) {
     // Then, we load that into cheerio and save it to $ for a shorthand selector
@@ -144,16 +146,28 @@ function scraper(link) {
     db.Post.create(result).catch(err => console.log(err));
   });
   // end of crawler
-  console.log("adScraped!");
+  console.log("Auto Ad Scraped!");
 }
 
-// C - SCHEDULER
-const job = new CronJob("0 */15 * * * *", async function() {
-  checker();
-  console.log("Cron Run");
-});
+// C - Crawler - Jamaica Cars
+// =====================================
+function pageCrawler() {
+  var count = 0;
+  var baseURL = "https://www.jacars.net/?page=browse&e=AddedThisWeek&p=";
+
+  var targetURL = baseURL + count;
+
+  // Only scrapes first 10 pages
+  while (count < 10) {
+    // =======================change to 10
+    count++;
+    targetURL = baseURL + count;
+    pageScraper(targetURL);
+  } //end while function
+}
 
 // D - SCRAPER: Jamiaca Cars
+// =====================================
 function pageScraper(element) {
   axios.get(element).then(function(response) {
     // Then, we load that into cheerio and save it to $ for a shorthand selector
@@ -267,7 +281,7 @@ function pageScraper(element) {
         if (docs.length) {
           // console.log("no ad found");
         } else {
-          console.log("ad Found");
+          console.log("JA Car ad Found");
           // console.log(result);
 
           // Add Initial Result (/wo IMGS) to db
@@ -308,24 +322,17 @@ function pageScraper(element) {
   // end of crawler
 }
 
-// Crawler - Jamaica Cars
-function pageCrawler() {
-  var count = 0;
-  var baseURL = "https://www.jacars.net/?page=browse&e=AddedThisWeek&p=";
+// ==========================
+// ====== AUTOMATION ========
+// ==========================
 
-  var targetURL = baseURL + count;
-
-  // Only scrapes first 10 pages
-  while (count < 5) {
-    // =======================change to 10
-    count++;
-    targetURL = baseURL + count;
-    pageScraper(targetURL);
-  } //end while function
-} // end main function
+//  SCHEDULER
+// =====================================
+const job = new CronJob("0 */15 * * * *", function() {
+  checker();
+  pageCrawler();
+  console.log("Cron Run");
+});
 
 // LAUNCHER
 job.start();
-
-// TEMP LAUNCHER
-pageCrawler();
