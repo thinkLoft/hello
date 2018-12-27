@@ -30,7 +30,7 @@ module.exports = router;
 // ========== APP ===========
 // ==========================
 
-// A - AUTOADS RSS CHECKER
+// A - CRAWLER: AUTO ADS CHECKER
 // =====================================
 function checker() {
   axios.get("https://www.autoadsja.com/rss.asp").then(function(response) {
@@ -65,7 +65,7 @@ function checker() {
     // end each function
   });
   // end of axios function
-  return "hello from getAutoAdsLinks function";
+  return "hello from checker function";
 }
 
 // B - SCRAPER: AUTOADS
@@ -95,10 +95,13 @@ function scraper(link) {
       .replace(/\-.*/g, "")
       .trim();
 
-    var location = $(".per-detail > ul > li")[0]
-      .children[0].data.replace("Location: ", "")
-      .replace(/\s+/g, "")
-      .replace(".", ". ");
+    if ($(".per-detail > ul > li") === undefined) {
+      // Check array undefined to catch err from array
+      var location = $(".per-detail > ul > li")[0]
+        .children[0].data.replace("Location: ", "")
+        .replace(/\s+/g, "")
+        .replace(".", ". ");
+    }
 
     var contact = $(".contact_details")
       .text()
@@ -144,9 +147,11 @@ function scraper(link) {
 
     // create new row in database
     db.Post.create(result).catch(err => console.log(err));
+
+    console.log("Auto Ad Scraped: " + result.srcURL);
   });
+  return "hello from pageCrawler";
   // end of crawler
-  console.log("Auto Ad Scraped!");
 }
 
 // C - Crawler - Jamaica Cars
@@ -169,156 +174,166 @@ function pageCrawler() {
 // D - SCRAPER: Jamiaca Cars
 // =====================================
 function pageScraper(element) {
-  axios.get(element).then(function(response) {
-    // Then, we load that into cheerio and save it to $ for a shorthand selector
-    var $ = cheerio.load(response.data);
+  axios
+    .get(element)
+    .then(function(response) {
+      // Then, we load that into cheerio and save it to $ for a shorthand selector
+      var $ = cheerio.load(response.data);
 
-    // page Crawler
-    $(".hiddenInfo").each(function(i, element) {
-      // grab sc URL
-      var srcURL = $(this)
-        .children("a")
-        .attr("href");
+      // page Crawler
+      $(".hiddenInfo").each(function(i, element) {
+        // grab sc URL
+        var srcURL = $(this)
+          .children("a")
+          .attr("href");
 
-      // Save an empty result object
-      var result = {};
+        // Save an empty result object
+        var result = {};
 
-      //  Data Cleanup
-      var year = $(this)
-        .children("div")
-        .children(".results-year")
-        .text()
-        .trim();
+        //  Data Cleanup
+        var year = $(this)
+          .children("div")
+          .children(".results-year")
+          .text()
+          .trim();
 
-      var tempTitle = $(this)
-        .children("div")
-        .children("a")
-        .children("div")
-        .text()
-        .split(" ");
+        var tempTitle = $(this)
+          .children("div")
+          .children("a")
+          .children("div")
+          .text()
+          .split(" ");
 
-      var make = tempTitle[0].trim();
+        var make = tempTitle[0].trim();
 
-      tempTitle.shift(); // Removes first entry (make) from array of words from title
+        tempTitle.shift(); // Removes first entry (make) from array of words from title
 
-      var model = tempTitle.join(" ").trim(); // Join the remaining array entries to create the model
+        var model = tempTitle.join(" ").trim(); // Join the remaining array entries to create the model
 
-      var dirtyPrice = $(this)
-        .children("div")
-        .children(".results-priceE")
-        .text()
-        .trim();
+        var dirtyPrice = $(this)
+          .children("div")
+          .children(".results-priceE")
+          .text()
+          .trim();
 
-      var price = dirtyPrice.replace(/[^0-9.-]+/g, "").trim();
+        var price = dirtyPrice.replace(/[^0-9.-]+/g, "").trim();
 
-      var postTitle = year + " " + make + " " + model + " - " + dirtyPrice;
+        var postTitle = year + " " + make + " " + model + " - " + dirtyPrice;
 
-      var descArr = [];
+        var descArr = [];
 
-      $(this)
-        .children("div")
-        .children(".results-lable")
-        .each(function() {
-          descArr.push(
-            $(this)
-              .text()
-              .trim()
-          );
+        $(this)
+          .children("div")
+          .children(".results-lable")
+          .each(function() {
+            descArr.push(
+              $(this)
+                .text()
+                .trim()
+            );
+          });
+
+        descArr.shift();
+        descArr.shift();
+
+        description = descArr.join("\n");
+
+        //Contact Number parsers
+        contactNumberArray = description.match(/Tel:(\W+(\d+))-(\d+)/g);
+
+        if (contactNumberArray[0] === null) {
+          console.log(contactNumberArray);
+        } else {
+          contactNumber = contactNumberArray[0].replace(/[^0-9]+/g, "");
+        }
+
+        //Location parser
+        parishArr = [
+          "Clarendon",
+          "Manchester",
+          "Westmoreland",
+          "Kingston",
+          "Saint Catherine",
+          "Portland",
+          "Hanover",
+          "Saint Andrew",
+          "Saint Ann",
+          "Saint Thomas",
+          "Saint Elizabeth",
+          "Saint James",
+          "Saint Mary",
+          "Trelawny"
+        ];
+
+        var parish = "";
+
+        parishArr.forEach(function(element, i) {
+          if (description.match(element) !== null) {
+            parish = description.match(element)[0];
+          }
         });
 
-      descArr.shift();
-      descArr.shift();
+        // ================
+        // Update Results object
+        result.srcURL = srcURL;
+        result.postTitle = postTitle;
+        result.price = price;
+        result.year = year;
+        result.make = make;
+        result.model = model;
+        result.parish = parish;
+        result.contactNumber = contactNumber;
+        result.description = description;
+        // result.imgs = imgs;
+        result.posted = false;
 
-      description = descArr.join("\n");
+        // Check if ad Exists in DB
+        db.Post.find({ srcURL: result.srcURL }, function(err, docs) {
+          if (docs.length) {
+            // console.log("no ad found");
+          } else {
+            console.log("JA Car ad Found: " + result.srcURL);
+            // console.log(result);
 
-      //Contact Number parsers
-      contactNumberArray = description.match(/Tel:(\W+(\d+))-(\d+)/g);
+            // Add Initial Result (/wo IMGS) to db
+            db.Post.create(result)
+              .then(function(result) {
+                // Go out and grab Image Scraper
+                axios
+                  .get(result.srcURL)
+                  .then(function(response) {
+                    var $ = cheerio.load(response.data);
 
-      contactNumber = contactNumberArray[0].replace(/[^0-9]+/g, "");
+                    var imgs = [];
+                    var result = {};
 
-      //Location parser
-      parishArr = [
-        "Clarendon",
-        "Manchester",
-        "Westmoreland",
-        "Kingston",
-        "Saint Catherine",
-        "Portland",
-        "Hanover",
-        "Saint Andrew",
-        "Saint Ann",
-        "Saint Thomas",
-        "Saint Elizabeth",
-        "Saint James",
-        "Saint Mary",
-        "Trelawny"
-      ];
+                    $("#theImages")
+                      .children("div")
+                      .each(function(i, element) {
+                        var img = $(this)
+                          .children("a")
+                          .attr("href")
+                          .replace(/(.JPG).*/g, ".JPG")
+                          .trim();
+                        imgs.push(img);
+                      });
 
-      var parish = "";
-
-      parishArr.forEach(function(element, i) {
-        if (description.match(element) !== null) {
-          parish = description.match(element)[0];
-        }
+                    result.imgs = imgs;
+                    // find and update imgs
+                    db.Post.findOneAndUpdate(
+                      { srcURL: response.config.url },
+                      result
+                    ).catch(err => console.log(err));
+                  })
+                  .catch(err => console.log(err));
+              })
+              .catch(err => console.log(err));
+          }
+        }); // end db check
       });
-
-      // ================
-      // Update Results object
-      result.srcURL = srcURL;
-      result.postTitle = postTitle;
-      result.price = price;
-      result.year = year;
-      result.make = make;
-      result.model = model;
-      result.parish = parish;
-      result.contactNumber = contactNumber;
-      result.description = description;
-      // result.imgs = imgs;
-      result.posted = false;
-
-      // Check if ad Exists in DB
-      db.Post.find({ srcURL: result.srcURL }, function(err, docs) {
-        if (docs.length) {
-          // console.log("no ad found");
-        } else {
-          console.log("JA Car ad Found");
-          // console.log(result);
-
-          // Add Initial Result (/wo IMGS) to db
-          db.Post.create(result)
-            .then(function(result) {
-              // Go out and grab Image Scraper
-              axios.get(result.srcURL).then(function(response) {
-                var $ = cheerio.load(response.data);
-
-                var imgs = [];
-                var result = {};
-
-                $("#theImages")
-                  .children("div")
-                  .each(function(i, element) {
-                    var img = $(this)
-                      .children("a")
-                      .attr("href")
-                      .replace(/(.JPG).*/g, ".JPG")
-                      .trim();
-                    imgs.push(img);
-                  });
-
-                result.imgs = imgs;
-                // find and update imgs
-                db.Post.findOneAndUpdate(
-                  { srcURL: response.config.url },
-                  result
-                ).catch(err => console.log(err));
-              });
-            })
-            .catch(err => console.log(err));
-        }
-      }); // end db check
-    });
-  });
-  return "return from scraper";
+    })
+    .catch(err => console.log(err));
+  return "hello from pageScraper";
   // end of crawler
 }
 
@@ -327,10 +342,11 @@ function pageScraper(element) {
 // ==========================
 
 const job = new CronJob(
-  "0 */15 * * * *",
+  "0 */5 * * * *",
   function() {
     checker();
     pageCrawler();
+    pageScraper("https://www.jacars.net/");
     console.log("Cron Run, Next Run:");
     console.log(this.nextDates());
   },
