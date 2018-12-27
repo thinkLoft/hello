@@ -326,13 +326,17 @@ function pageScraper(element) {
 // ====== AUTOMATION ========
 // ==========================
 
-//  SCHEDULER
-// =====================================
-const job = new CronJob("0 */15 * * * *", function() {
-  checker();
-  pageCrawler();
-  console.log("Cron Run");
-});
-
-// LAUNCHER
-job.start();
+const job = new CronJob(
+  "0 */15 * * * *",
+  function() {
+    checker();
+    pageCrawler();
+    console.log("Cron Run, Next Run:");
+    console.log(this.nextDates());
+  },
+  null,
+  true,
+  null,
+  null,
+  true
+);
