@@ -265,19 +265,41 @@ function pageScraper(element) {
       // Check if ad Exists in DB
       db.Post.find({ srcURL: result.srcURL }, function(err, docs) {
         if (docs.length) {
-          console.log("no ad found");
+          // console.log("no ad found");
         } else {
           console.log("ad Found");
-          console.log(result);
+          // console.log(result);
 
-          // Image Scraper
-          axios.get(result.srcURL).then(function(response) {
-            var $ = cheerio.load(response.data);
-          });
-          // create new row in database
-          // db.Post.create(result).catch(err => console.log(err));
-          //   });
-          // });
+          // Add Initial Result (/wo IMGS) to db
+          db.Post.create(result)
+            .then(function(result) {
+              // Go out and grab Image Scraper
+              axios.get(result.srcURL).then(function(response) {
+                var $ = cheerio.load(response.data);
+
+                var imgs = [];
+                var result = {};
+
+                $("#theImages")
+                  .children("div")
+                  .each(function(i, element) {
+                    var img = $(this)
+                      .children("a")
+                      .attr("href")
+                      .replace(/(.JPG).*/g, ".JPG")
+                      .trim();
+                    imgs.push(img);
+                  });
+
+                result.imgs = imgs;
+                // find and update imgs
+                db.Post.findOneAndUpdate(
+                  { srcURL: response.config.url },
+                  result
+                ).catch(err => console.log(err));
+              });
+            })
+            .catch(err => console.log(err));
         }
       }); // end db check
     });
@@ -294,7 +316,7 @@ function pageCrawler() {
   var targetURL = baseURL + count;
 
   // Only scrapes first 10 pages
-  while (count < 1) {
+  while (count < 5) {
     // =======================change to 10
     count++;
     targetURL = baseURL + count;
