@@ -340,7 +340,7 @@ function pageScraper(element) {
 // ==========================
 
 const job = new CronJob(
-  "0 */5 * * * *",
+  "0 */15 * * * *",
   function() {
     checker();
     // pageCrawler();
