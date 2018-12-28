@@ -335,7 +335,7 @@ function pageScraper(element) {
                     imgs.push(img);
                   });
 
-                result.imgs = imgs;
+                res.imgs = imgs;
 
                 // find and update imgs
                 db.Post.findOneAndUpdate(
