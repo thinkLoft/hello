@@ -268,6 +268,32 @@ function pageScraper(element) {
         parishArr.forEach(function(element, i) {
           if (description.match(element) !== null) {
             parish = description.match(element)[0];
+            switch (parish) {
+              case "Kingston":
+                parish = "Kingston/St. Andrew";
+                break;
+              case "Saint Andrew":
+                parish = "Kingston/St. Andrew";
+                break;
+              case "Saint Ann":
+                parish = "St. Ann";
+                break;
+              case "Saint Catherine":
+                parish = "St. Catherine";
+                break;
+              case "Saint Elizabeth":
+                parish = "St. Elizabeth";
+                break;
+              case "Saint James":
+                parish = "St. James";
+                break;
+              case "Saint Mary":
+                parish = "St. Mary";
+                break;
+              case "Saint Thomas":
+                parish = "St. Thomas";
+                break;
+            }
           }
         });
 
@@ -295,42 +321,50 @@ function pageScraper(element) {
 
             // Add Initial Result (/wo IMGS) to db
             db.Post.create(result)
-              .then(function(result) {
-                // Go out and grab Image Scraper
-                axios
-                  .get(result.srcURL)
-                  .then(function(response) {
-                    var $ = cheerio.load(response.data);
+              .then(console.log("added to db"))
+              .catch(err => console.log("error in the db in create")); //end of db create
 
-                    var imgs = [];
-                    var result = {};
+            // Go out and grab Image Scraper
+            axios
+              .get(result.srcURL)
+              .then(function(response) {
+                var $ = cheerio.load(response.data);
 
-                    $("#theImages")
-                      .children("div")
-                      .each(function(i, element) {
-                        var img = $(this)
-                          .children("a")
-                          .attr("href")
-                          .replace(/(.JPG).*/g, ".JPG")
-                          .trim();
-                        imgs.push(img);
-                      });
+                var imgs = [];
+                var res = {};
 
-                    result.imgs = imgs;
-                    // find and update imgs
-                    db.Post.findOneAndUpdate(
-                      { srcURL: response.config.url },
-                      result
-                    ).catch(err => console.log(err));
-                  })
-                  .catch(err => console.log(err));
+                $("#theImages")
+                  .children("div")
+                  .each(function(i, element) {
+                    var img = $(this)
+                      .children("a")
+                      .attr("href")
+                      .replace(/(.JPG).*/g, ".JPG")
+                      .trim();
+                    imgs.push(img);
+                  });
+
+                result.imgs = imgs;
+                // find and update imgs
+                db.Post.findOneAndUpdate({ srcURL: response.config.url }, res)
+                  .then(console.log("added imgs to db"))
+                  .catch(err =>
+                    console.log("error in the db fnidonandupdate function")
+                  ); // end of db findOneandUdpdate
               })
-              .catch(err => console.log(err));
-          }
+              .catch(err =>
+                console.log(
+                  "error in the inner Axios Function, line 332: " +
+                    response.config.url +
+                    " - ad: " +
+                    result.srcURL
+                )
+              ); //end of Axios
+          } // end of else statement
         }); // end db check
       });
     })
-    .catch(err => console.log(err));
+    .catch(err => console.log("err from page scraper axios function"));
   return "hello from pageScraper";
   // end of crawler
 }
@@ -340,12 +374,13 @@ function pageScraper(element) {
 // ==========================
 
 const job = new CronJob(
-  "0 */15 * * * *",
+  "0 */5 * * * *",
   function() {
     checker();
     // pageCrawler();
     pageScraper("https://www.jacars.net/?page=browse&e=AddedThisWeek&p=1");
     pageScraper("https://www.jacars.net/");
+    pageScraper("https://www.jacars.net/?page=browse&e=AddedThisWeek&p=2");
     console.log("Cron Run, Next Run:");
     console.log(this.nextDates());
   },
