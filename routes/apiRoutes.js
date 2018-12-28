@@ -177,7 +177,6 @@ function pageScraper(element) {
   axios
     .get(element)
     .then(function(response) {
-      // Then, we load that into cheerio and save it to $ for a shorthand selector
       var $ = cheerio.load(response.data);
 
       // page Crawler
@@ -187,17 +186,15 @@ function pageScraper(element) {
           .children("a")
           .attr("href");
 
-        // Save an empty result object
-        var result = {};
+        var result = {}; // Save an empty result object
 
-        //  Data Cleanup
-        var year = $(this)
+        var year = $(this) //  Data Cleanup
           .children("div")
           .children(".results-year")
           .text()
           .trim();
 
-        var tempTitle = $(this)
+        var tempTitle = $(this) //  Data Cleanup
           .children("div")
           .children("a")
           .children("div")
@@ -214,11 +211,11 @@ function pageScraper(element) {
           .children("div")
           .children(".results-priceE")
           .text()
-          .trim();
+          .trim(); // Grab dirty price
 
-        var price = dirtyPrice.replace(/[^0-9.-]+/g, "").trim();
+        var price = dirtyPrice.replace(/[^0-9.-]+/g, "").trim(); // Clean price
 
-        var postTitle = year + " " + make + " " + model + " - " + dirtyPrice;
+        var postTitle = year + " " + make + " " + model + " - " + dirtyPrice; // Building the year
 
         var descArr = [];
 
@@ -232,17 +229,16 @@ function pageScraper(element) {
                 .trim()
             );
           });
-
+        // Removed empty array elements
         descArr.shift();
         descArr.shift();
 
-        description = descArr.join("\n");
+        description = descArr.join("\n"); // Joined the remaining together
 
-        //Contact Number parsers
-        contactNumberArray = description.match(/Tel:(\W+(\d+))-(\d+)/g);
+        contactNumberArray = description.match(/Tel:(\W+(\d+))-(\d+)/g); //Contact Number parsers
 
         if (contactNumberArray !== null) {
-          contactNumber = contactNumberArray[0].replace(/[^0-9]+/g, "");
+          contactNumber = contactNumberArray[0].replace(/[^0-9]+/g, ""); // Verify if Array empty, then parse numbers
         }
 
         //Location parser
@@ -308,7 +304,6 @@ function pageScraper(element) {
         result.parish = parish;
         result.contactNumber = contactNumber;
         result.description = description;
-        // result.imgs = imgs;
         result.posted = false;
 
         // Check if ad Exists in DB
@@ -317,19 +312,15 @@ function pageScraper(element) {
             // console.log("no ad found");
           } else {
             console.log("JA Car ad Found: " + result.srcURL);
-            // console.log(result);
-
             // Add Initial Result (/wo IMGS) to db
-            db.Post.create(result)
-              .then(console.log("added to db"))
-              .catch(err => console.log("error in the db in create")); //end of db create
-
+            db.Post.create(result).catch(err =>
+              console.log("error in the db in create")
+            ); //end of db create
             // Go out and grab Image Scraper
             axios
               .get(result.srcURL)
               .then(function(response) {
                 var $ = cheerio.load(response.data);
-
                 var imgs = [];
                 var res = {};
 
@@ -345,12 +336,14 @@ function pageScraper(element) {
                   });
 
                 result.imgs = imgs;
+
                 // find and update imgs
-                db.Post.findOneAndUpdate({ srcURL: response.config.url }, res)
-                  .then(console.log("added imgs to db"))
-                  .catch(err =>
-                    console.log("error in the db fnidonandupdate function")
-                  ); // end of db findOneandUdpdate
+                db.Post.findOneAndUpdate(
+                  { srcURL: response.config.url },
+                  res
+                ).catch(err =>
+                  console.log("error in the db fnidonandupdate function")
+                ); // end of db findOneandUdpdate
               })
               .catch(err =>
                 console.log(
