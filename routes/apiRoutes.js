@@ -163,7 +163,7 @@ function pageCrawler() {
   var targetURL = baseURL + count;
 
   // Only scrapes first 10 pages
-  while (count < 10) {
+  while (count < 5) {
     // =======================change to 10
     count++;
     targetURL = baseURL + count;
@@ -241,9 +241,7 @@ function pageScraper(element) {
         //Contact Number parsers
         contactNumberArray = description.match(/Tel:(\W+(\d+))-(\d+)/g);
 
-        if (contactNumberArray[0] === null) {
-          console.log(contactNumberArray);
-        } else {
+        if (contactNumberArray !== null) {
           contactNumber = contactNumberArray[0].replace(/[^0-9]+/g, "");
         }
 
@@ -345,7 +343,8 @@ const job = new CronJob(
   "0 */5 * * * *",
   function() {
     checker();
-    pageCrawler();
+    // pageCrawler();
+    pageScraper("https://www.jacars.net/?page=browse&e=AddedThisWeek&p=1");
     pageScraper("https://www.jacars.net/");
     console.log("Cron Run, Next Run:");
     console.log(this.nextDates());
