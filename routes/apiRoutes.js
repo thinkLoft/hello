@@ -24,6 +24,27 @@ router.get("/cron", function(req, res) {
   res.send("Cron Started");
 });
 
+router.get("/latest", function(req, res) {
+  // Build query to get the lastest listings sorted by date
+  var query = db.Post.find({}).sort({ _id: -1 });
+
+  // verify it has a contact number
+  query.where("contactNumber").ne(null);
+  // verify it has at least one image
+  query.where("imgs").gt([]);
+  // Limit to 500
+  query.limit(500);
+
+  query.exec(function(err, docs) {
+    res.send(docs);
+  });
+});
+
+// Return count of all listings
+db.Post.count(function(err, docs) {
+  console.log(docs);
+});
+
 module.exports = router;
 
 // ==========================
