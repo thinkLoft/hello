@@ -7,6 +7,12 @@ const axios = require("axios");
 const cheerio = require("cheerio");
 const CronJob = require("cron").CronJob;
 
+// CSV Tools
+const fs = require("fs");
+const moment = require("moment");
+const json2csv = require("json2csv").parse;
+const path = require("path");
+
 // Require all models
 const db = require("../models");
 
@@ -46,6 +52,39 @@ router.get("/count", function(req, res) {
     response = "";
     response += docs;
     res.send(response);
+  });
+});
+
+router.get("/csv", function(req, res) {
+  db.Post.find({}, function(err, docs) {
+    if (err) {
+      return res.status(500).json({ err });
+    } else {
+      let csv;
+      try {
+        csv = json2csv(docs, { fields });
+      } catch (err) {
+        return res.status(500).json({ err });
+      }
+      const dateTime = moment().format("YYYYMMDDhhmmss");
+      const filePath = path.join(
+        __dirname,
+        "..",
+        "public",
+        "exports",
+        "csv-" + dateTime + ".csv"
+      );
+      fs.writeFile(filePath, csv, function(err) {
+        if (err) {
+          return res.json(err).status(500);
+        } else {
+          setTimeout(function() {
+            fs.unlinkSync(filePath); // delete this file after 30 seconds
+          }, 30000);
+          return res.json("/exports/csv-" + dateTime + ".csv");
+        }
+      });
+    }
   });
 });
 
