@@ -43,7 +43,9 @@ router.get("/latest", function(req, res) {
 // Return count of all listings
 router.get("/count", function(req, res) {
   db.Post.count(function(err, docs) {
-    res.send(docs);
+    response = "";
+    response += docs;
+    res.send(response);
   });
 });
 
