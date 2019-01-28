@@ -15,6 +15,7 @@ const path = require("path");
 
 // Require all models
 const db = require("../models");
+const fields = ["srcURL", "year", "make", "model", "price", "parish"];
 
 // ==========================
 // ======== Routes ==========
@@ -67,13 +68,14 @@ router.get("/csv", function(req, res) {
         return res.status(500).json({ err });
       }
       const dateTime = moment().format("YYYYMMDDhhmmss");
-      const filePath = path.join(
-        __dirname,
-        "..",
-        "public",
-        "exports",
-        "csv-" + dateTime + ".csv"
-      );
+      // const filePath = path.join(
+      //   __dirname,
+      //   "..",
+      //   "public",
+      //   "exports",
+      //   "csv-" + dateTime + ".csv"
+      // );
+      const filePath = path.join(__dirname, "csv-" + dateTime + ".csv");
       fs.writeFile(filePath, csv, function(err) {
         if (err) {
           return res.json(err).status(500);
@@ -81,7 +83,9 @@ router.get("/csv", function(req, res) {
           setTimeout(function() {
             fs.unlinkSync(filePath); // delete this file after 30 seconds
           }, 30000);
-          return res.json("/exports/csv-" + dateTime + ".csv");
+          // return res.json("csv-" + dateTime + ".csv");
+          // return res.send("finished");
+          return res.download(filePath);
         }
       });
     }
