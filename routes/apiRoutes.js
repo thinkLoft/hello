@@ -63,26 +63,17 @@ function checker() {
     var $ = cheerio.load(response.data, { xmlMode: true });
 
     $("item").each(function(i, element) {
-      var result = {};
-
-      // Add the text and href of every link, and save them as properties of the result object
-      result.srcURL = $(this)
+      var srcURL = $(this)
         .children("link")
-        .text();
-      result.srcTitle = $(this)
-        .children("title")
-        .text();
-      result.srcImg = $(this)
-        .children("description")
         .text();
 
       // Check
-      db.Post.find({ srcURL: result.srcURL }, function(err, docs) {
+      db.Post.find({ srcURL: srcURL }, function(err, docs) {
         if (docs.length) {
           // no ad found
         } else {
-          console.log("Ad Found: " + result.srcURL);
-          scraper(result.srcURL);
+          console.log("Ad Found: " + srcURL);
+          scraper(srcURL);
         }
       });
       // end post function
@@ -177,23 +168,6 @@ function scraper(link) {
   });
   return "hello from pageCrawler";
   // end of crawler
-}
-
-// C - Crawler - Jamaica Cars
-// =====================================
-function pageCrawler() {
-  var count = 0;
-  var baseURL = "https://www.jacars.net/?page=browse&e=AddedThisWeek&p=";
-
-  var targetURL = baseURL + count;
-
-  // Only scrapes first 10 pages
-  while (count < 5) {
-    // =======================change to 10
-    count++;
-    targetURL = baseURL + count;
-    pageScraper(targetURL);
-  } //end while function
 }
 
 // D - SCRAPER: Jamiaca Cars

@@ -7,14 +7,6 @@ var postSchema = new Schema({
     type: String,
     required: true
   },
-  srcTitle: {
-    type: String,
-    required: false
-  },
-  srcImg: {
-    type: String,
-    required: false
-  },
   postTitle: {
     type: String,
     required: false
@@ -58,10 +50,6 @@ var postSchema = new Schema({
   posted: {
     type: Boolean,
     require: false
-  },
-  postURL: {
-    type: String,
-    required: false
   }
 });
 
