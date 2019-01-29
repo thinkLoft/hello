@@ -78,6 +78,10 @@ var postSchema = new Schema({
   mileage: {
     type: String,
     require: false
+  },
+  date: {
+    type: String,
+    require: false
   }
 });
 

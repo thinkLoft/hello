@@ -68,13 +68,6 @@ router.get("/csv", function(req, res) {
         return res.status(500).json({ err });
       }
       const dateTime = moment().format("YYYYMMDDhhmmss");
-      // const filePath = path.join(
-      //   __dirname,
-      //   "..",
-      //   "public",
-      //   "exports",
-      //   "csv-" + dateTime + ".csv"
-      // );
       const filePath = path.join(__dirname, "csv-" + dateTime + ".csv");
       fs.writeFile(filePath, csv, function(err) {
         if (err) {
@@ -83,8 +76,6 @@ router.get("/csv", function(req, res) {
           setTimeout(function() {
             fs.unlinkSync(filePath); // delete this file after 30 seconds
           }, 30000);
-          // return res.json("csv-" + dateTime + ".csv");
-          // return res.send("finished");
           return res.download(filePath);
         }
       });
@@ -233,6 +224,8 @@ function scraper(link) {
       imgs.push($(this).attr("href"));
     });
 
+    var dateCaptured = moment().format("YYYYMMDDhhmmss");
+
     // Update Results object
     result.srcURL = response.config.url;
     result.postTitle = title;
@@ -252,6 +245,7 @@ function scraper(link) {
     result.fuelType = fuelType;
     result.engineSize = engineSize;
     result.mileage = mileage;
+    result.date - dateCaptured;
     result.posted = false;
 
     // create new row in database
@@ -391,6 +385,8 @@ function pageScraper(element, body) {
           .text()
           .trim();
 
+        var dateCaptured = moment().format("YYYYMMDDhhmmss");
+
         // ================
         // Update Results object
         result.srcURL = srcURL;
@@ -405,6 +401,7 @@ function pageScraper(element, body) {
         result.posted = false;
         result.bodyType = body;
         result.transmission = transmission;
+        result.date = dateCaptured;
 
         // Check if ad Exists in DB
         db.Post.find({ srcURL: result.srcURL }, function(err, docs) {
