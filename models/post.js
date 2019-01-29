@@ -50,6 +50,34 @@ var postSchema = new Schema({
   posted: {
     type: Boolean,
     require: false
+  },
+  bodyType: {
+    type: String,
+    require: false
+  },
+  driverSide: {
+    type: String,
+    require: false
+  },
+  driveType: {
+    type: String,
+    require: false
+  },
+  transmission: {
+    type: String,
+    require: false
+  },
+  fuelType: {
+    type: String,
+    require: false
+  },
+  engineSize: {
+    type: String,
+    require: false
+  },
+  mileage: {
+    type: String,
+    require: false
   }
 });
 

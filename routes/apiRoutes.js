@@ -154,12 +154,55 @@ function scraper(link) {
       .replace(/\-.*/g, "")
       .trim();
 
-    if ($(".per-detail > ul > li") === undefined) {
+    if ($(".per-detail > ul > li") !== undefined) {
       // Check array undefined to catch err from array
       var location = $(".per-detail > ul > li")[0]
         .children[0].data.replace("Location: ", "")
         .replace(/\s+/g, "")
         .replace(".", ". ");
+      // console.log(location);
+
+      var bodyType = $(".per-detail > ul > li")[1]
+        .children[0].data.replace("Body Type: ", "")
+        .replace(/\s+/g, "")
+        .replace(".", ". ");
+      // console.log(bodyType);
+
+      var driverSide = $(".per-detail > ul > li")[2]
+        .children[0].data.replace("Driver Side: ", "")
+        .replace(/\s+/g, "")
+        .replace(".", ". ");
+      // console.log(driverSide);
+
+      var driveType = $(".per-detail > ul > li")[3]
+        .children[0].data.replace("Drive Type: ", "")
+        .replace(/\s+/g, "")
+        .replace(".", ". ");
+      // console.log(driveType);
+
+      var transmission = $(".per-detail > ul > li")[4]
+        .children[0].data.replace("Transmission: ", "")
+        .replace(/\s+/g, "")
+        .replace(".", ". ");
+      // console.log(transmission);
+
+      var fuelType = $(".per-detail > ul > li")[5]
+        .children[0].data.replace("Fuel type: ", "")
+        .replace(/\s+/g, "")
+        .replace(".", ". ");
+      // console.log(fuelType);
+
+      var engineSize = $(".per-detail > ul > li")[6]
+        .children[0].data.replace("CC rating: ", "")
+        .replace(/\s+/g, "")
+        .replace(".", ". ");
+      // console.log(engineSize);
+
+      var mileage = $(".per-detail > ul > li")[7]
+        .children[0].data.replace("Mileage: ", "")
+        .replace(/\s+/g, "")
+        .replace(".", ". ");
+      // console.log(mileage);
     }
 
     var contact = $(".contact_details")
@@ -202,6 +245,13 @@ function scraper(link) {
     result.description = description;
     result.imgs = imgs;
     result.price = price;
+    result.bodyType = bodyType;
+    result.driverSide = driverSide;
+    result.driveType = driveType;
+    result.transmission = transmission;
+    result.fuelType = fuelType;
+    result.engineSize = engineSize;
+    result.mileage = mileage;
     result.posted = false;
 
     // create new row in database
@@ -215,7 +265,7 @@ function scraper(link) {
 
 // D - SCRAPER: Jamiaca Cars
 // =====================================
-function pageScraper(element) {
+function pageScraper(element, body) {
   axios
     .get(element)
     .then(function(response) {
@@ -335,6 +385,12 @@ function pageScraper(element) {
           }
         });
 
+        var transmission = $(this) //  Data Cleanup
+          .children("div")
+          .children(".results-trans")
+          .text()
+          .trim();
+
         // ================
         // Update Results object
         result.srcURL = srcURL;
@@ -347,6 +403,8 @@ function pageScraper(element) {
         result.contactNumber = contactNumber;
         result.description = description;
         result.posted = false;
+        result.bodyType = body;
+        result.transmission = transmission;
 
         // Check if ad Exists in DB
         db.Post.find({ srcURL: result.srcURL }, function(err, docs) {
@@ -412,11 +470,50 @@ const job = new CronJob(
   "0 */15 * * * *",
   function() {
     checker();
-    // pageCrawler();
-    pageScraper("https://www.jacars.net/?page=browse&e=AddedThisWeek&p=1");
-    pageScraper("https://www.jacars.net/");
-    pageScraper("https://www.jacars.net/?page=browse&e=AddedThisWeek&p=2");
+    pageScraper(
+      "https://www.jacars.net/?page=browse&bodyType=Convertible",
+      "Convertible"
+    );
+    pageScraper(
+      "https://www.jacars.net/?page=browse&bodyType=Hatchback",
+      "Hatchback"
+    );
+    pageScraper(
+      "https://www.jacars.net/?page=browse&bodyType=Minivan-and-Seven-Seaters",
+      "Minivan"
+    );
+    pageScraper(
+      "https://www.jacars.net/?page=browse&bodyType=4-Door-Sedans",
+      "Sedans"
+    );
+    pageScraper(
+      "https://www.jacars.net/?page=browse&bodyType=2-Door-Sedans-and-Coupes",
+      "Coupe"
+    );
+    pageScraper("https://www.jacars.net/?page=browse&bodyType=SUV", "SUV");
+    pageScraper(
+      "https://www.jacars.net/?page=browse&bodyType=Vans-and-Small-Buses",
+      "Bus"
+    );
+    pageScraper(
+      "https://www.jacars.net/?page=browse&bodyType=Wagon",
+      "Station Wagon"
+    );
+    pageScraper(
+      "https://www.jacars.net/?page=browse&bodyType=Pick-Up",
+      "Pickup"
+    );
+    pageScraper(
+      "https://www.jacars.net/?page=browse&bodyType=Large-Buses",
+      "Bus"
+    );
+    pageScraper("https://www.jacars.net/?page=browse&bodyType=Truck", "Truck");
+    pageScraper(
+      "https://www.jacars.net/?page=browse&bodyType=Motorcycle",
+      "Motorcycle"
+    );
     console.log("Cron Run, Next Run:");
+
     console.log(this.nextDates());
   },
   null,
