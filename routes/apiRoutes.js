@@ -227,6 +227,7 @@ function scraper(link) {
     var dateCaptured = moment().format("YYYYMMDDhhmmss");
 
     // Update Results object
+    result.user = "autoadsja";
     result.srcURL = response.config.url;
     result.postTitle = title;
     result.price = price;
@@ -389,6 +390,7 @@ function pageScraper(element, body) {
 
         // ================
         // Update Results object
+        result.user = "jacars";
         result.srcURL = srcURL;
         result.postTitle = postTitle;
         result.price = price;
@@ -481,7 +483,7 @@ const job = new CronJob(
     );
     pageScraper(
       "https://www.jacars.net/?page=browse&bodyType=4-Door-Sedans",
-      "Sedans"
+      "Sedan"
     );
     pageScraper(
       "https://www.jacars.net/?page=browse&bodyType=2-Door-Sedans-and-Coupes",
@@ -494,7 +496,7 @@ const job = new CronJob(
     );
     pageScraper(
       "https://www.jacars.net/?page=browse&bodyType=Wagon",
-      "Station Wagon"
+      "stationwagon"
     );
     pageScraper(
       "https://www.jacars.net/?page=browse&bodyType=Pick-Up",

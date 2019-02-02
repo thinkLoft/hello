@@ -82,6 +82,10 @@ var postSchema = new Schema({
   date: {
     type: String,
     require: false
+  },
+  user: {
+    type: String,
+    require: false
   }
 });
 
