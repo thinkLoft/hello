@@ -139,8 +139,9 @@ function scraper(link) {
     var ymm = title.split(" "); // break Title into array of text
     var year = ymm[0];
     var make = ymm[1].replace(/\-.*/g, "").trim();
-    var modelIndex = title.indexOf(make) + make.length + 1;
-    var model = title
+    var model = ymm[2].replace(/\-.*/g, "").trim();
+    var modelIndex = title.indexOf(model) + model.length + 1;
+    var trim = title
       .substring(modelIndex)
       .replace(/\-.*/g, "")
       .trim();
@@ -246,13 +247,18 @@ function scraper(link) {
     result.fuelType = fuelType;
     result.engineSize = engineSize;
     result.mileage = mileage;
-    result.date - dateCaptured;
+    result.date = dateCaptured;
+    result.trim = trim;
     result.posted = false;
 
     // create new row in database
     db.Post.create(result).catch(err => console.log(err));
 
     console.log("Auto Ad Scraped: " + result.srcURL);
+  });
+  // damage assessment
+  axios.get("https://doubleupja.com/").then(function(response) {
+    var $ = cheerio.load(response.data);
   });
   return "hello from pageCrawler";
   // end of crawler
@@ -288,11 +294,15 @@ function pageScraper(element, body) {
           .text()
           .split(" ");
 
-        var make = tempTitle[0].trim();
+        var make = tempTitle[0].trim(); // Uses first word to create the make
 
         tempTitle.shift(); // Removes first entry (make) from array of words from title
 
-        var model = tempTitle.join(" ").trim(); // Join the remaining array entries to create the model
+        var model = tempTitle[0].trim(); // uses second word to make the model
+
+        tempTitle.shift(); // Removes next entry (model) from array of words from title
+
+        var trim = tempTitle.join(" ").trim(); // Join the remaining array entires to create the trim
 
         var dirtyPrice = $(this)
           .children("div")
@@ -404,6 +414,7 @@ function pageScraper(element, body) {
         result.bodyType = body;
         result.transmission = transmission;
         result.date = dateCaptured;
+        result.trim = trim;
 
         // Check if ad Exists in DB
         db.Post.find({ srcURL: result.srcURL }, function(err, docs) {
@@ -457,6 +468,12 @@ function pageScraper(element, body) {
       });
     })
     .catch(err => console.log("err from page scraper axios function"));
+
+  // damage assessment
+  axios.get("https://doubleupja.com/").then(function(response) {
+    var $ = cheerio.load(response.data);
+  });
+
   return "hello from pageScraper";
   // end of crawler
 }
@@ -520,4 +537,9 @@ const job = new CronJob(
   null,
   null,
   true
+);
+
+pageScraper(
+  "https://www.jacars.net/?page=browse&bodyType=Convertible",
+  "Convertible"
 );
