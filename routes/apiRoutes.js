@@ -15,7 +15,7 @@ const path = require("path");
 
 // Require all models
 const db = require("../models");
-const fields = ["srcURL", "year", "make", "model", "price", "parish"];
+const fields = ["srcURL", "year", "make", "model", "trim", "price", "parish"];
 
 // ==========================
 // ======== Routes ==========
