@@ -39,6 +39,10 @@ var postSchema = new Schema({
     type: String,
     require: false
   },
+  trim: {
+    type: String,
+    require: false
+  },
   parish: {
     type: String,
     require: false
