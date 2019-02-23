@@ -266,213 +266,158 @@ function scraper(link) {
 
 // C - SCRAPER: Jamiaca Cars
 // =====================================
-function pageScraper(element, body) {
+function pageScraper(element) {
   axios
     .get(element)
     .then(function(response) {
       var $ = cheerio.load(response.data);
 
       // page Crawler
-      $(".hiddenInfo").each(function(i, element) {
+      $(".announcement-block__title").each(function(i, element) {
         // grab sc URL
-        var srcURL = $(this)
-          .children("a")
-          .attr("href");
+        var srcURL = "https://www.jacars.net" + $(this).attr("href");
+
+        console.log(srcURL);
 
         var result = {}; // Save an empty result object
 
-        var year = $(this) //  Data Cleanup
-          .children("div")
-          .children(".results-year")
-          .text()
-          .trim();
+        // var tempTitle = $(this) //  Data Cleanup
+        //   .children("div")
+        //   .children("a")
+        //   .children("div")
+        //   .text()
+        //   .split(" ");
 
-        var tempTitle = $(this) //  Data Cleanup
-          .children("div")
-          .children("a")
-          .children("div")
-          .text()
-          .split(" ");
+        //  var price = dirtyPrice.replace(/[^0-9.-]+/g, "").trim(); // Clean price
 
-        var make = tempTitle[0].trim(); // Uses first word to create the make
-
-        tempTitle.shift(); // Removes first entry (make) from array of words from title
-
-        var model = tempTitle[0].trim(); // uses second word to make the model
-
-        tempTitle.shift(); // Removes next entry (model) from array of words from title
-
-        var trim = tempTitle.join(" ").trim(); // Join the remaining array entires to create the trim
-
-        var dirtyPrice = $(this)
-          .children("div")
-          .children(".results-priceE")
-          .text()
-          .trim(); // Grab dirty price
-
-        var price = dirtyPrice.replace(/[^0-9.-]+/g, "").trim(); // Clean price
-
-        var postTitle = year + " " + make + " " + model + " - " + dirtyPrice; // Building the year
-
-        var descArr = [];
-
-        $(this)
-          .children("div")
-          .children(".results-lable")
-          .each(function() {
-            descArr.push(
-              $(this)
-                .text()
-                .trim()
-            );
-          });
-        // Removed empty array elements
-        descArr.shift();
-        descArr.shift();
-
-        description = descArr.join("\n"); // Joined the remaining together
-
-        contactNumberArray = description.match(/Tel:(\W+(\d+))-(\d+)/g); //Contact Number parsers
-
-        if (contactNumberArray !== null) {
-          contactNumber = contactNumberArray[0].replace(/[^0-9]+/g, ""); // Verify if Array empty, then parse numbers
-        }
+        // contactNumberArray = description.match(/Tel:(\W+(\d+))-(\d+)/g); //Contact Number parsers
 
         //Location parser
-        parishArr = [
-          "Clarendon",
-          "Manchester",
-          "Westmoreland",
-          "Kingston",
-          "Saint Catherine",
-          "Portland",
-          "Hanover",
-          "Saint Andrew",
-          "Saint Ann",
-          "Saint Thomas",
-          "Saint Elizabeth",
-          "Saint James",
-          "Saint Mary",
-          "Trelawny"
-        ];
+        // parishArr = [
+        //   "Clarendon",
+        //   "Manchester",
+        //   "Westmoreland",
+        //   "Kingston",
+        //   "Saint Catherine",
+        //   "Portland",
+        //   "Hanover",
+        //   "Saint Andrew",
+        //   "Saint Ann",
+        //   "Saint Thomas",
+        //   "Saint Elizabeth",
+        //   "Saint James",
+        //   "Saint Mary",
+        //   "Trelawny"
+        // // ];
 
-        var parish = "";
+        // var parish = "";
 
-        parishArr.forEach(function(element, i) {
-          if (description.match(element) !== null) {
-            parish = description.match(element)[0];
-            switch (parish) {
-              case "Kingston":
-                parish = "Kingston/St. Andrew";
-                break;
-              case "Saint Andrew":
-                parish = "Kingston/St. Andrew";
-                break;
-              case "Saint Ann":
-                parish = "St. Ann";
-                break;
-              case "Saint Catherine":
-                parish = "St. Catherine";
-                break;
-              case "Saint Elizabeth":
-                parish = "St. Elizabeth";
-                break;
-              case "Saint James":
-                parish = "St. James";
-                break;
-              case "Saint Mary":
-                parish = "St. Mary";
-                break;
-              case "Saint Thomas":
-                parish = "St. Thomas";
-                break;
-            }
-          }
-        });
-
-        var transmission = $(this) //  Data Cleanup
-          .children("div")
-          .children(".results-trans")
-          .text()
-          .trim();
+        // parishArr.forEach(function(element, i) {
+        //   if (description.match(element) !== null) {
+        //     parish = description.match(element)[0];
+        //     switch (parish) {
+        //       case "Kingston":
+        //         parish = "Kingston/St. Andrew";
+        //         break;
+        //       case "Saint Andrew":
+        //         parish = "Kingston/St. Andrew";
+        //         break;
+        //       case "Saint Ann":
+        //         parish = "St. Ann";
+        //         break;
+        //       case "Saint Catherine":
+        //         parish = "St. Catherine";
+        //         break;
+        //       case "Saint Elizabeth":
+        //         parish = "St. Elizabeth";
+        //         break;
+        //       case "Saint James":
+        //         parish = "St. James";
+        //         break;
+        //       case "Saint Mary":
+        //         parish = "St. Mary";
+        //         break;
+        //       case "Saint Thomas":
+        //         parish = "St. Thomas";
+        //         break;
+        //     }
+        //   }
+        // });
 
         var dateCaptured = moment().format("YYYYMMDDhhmmss");
 
         // ================
         // Update Results object
-        result.user = "jacars";
-        result.srcURL = srcURL;
-        result.postTitle = postTitle;
-        result.price = price;
-        result.year = year;
-        result.make = make;
-        result.model = model;
-        result.parish = parish;
-        result.contactNumber = contactNumber;
-        result.description = description;
-        result.posted = false;
-        result.bodyType = body;
-        result.transmission = transmission;
-        result.date = dateCaptured;
-        result.trim = trim;
+        // result.user = "jacars";
+        // result.srcURL = srcURL;
+        // result.postTitle = postTitle;
+        // result.price = price;
+        // result.year = year;
+        // result.make = make;
+        // result.model = model;
+        // result.parish = parish;
+        // result.contactNumber = contactNumber;
+        // result.description = description;
+        // result.posted = false;
+        // result.bodyType = body;
+        // result.transmission = transmission;
+        // result.date = dateCaptured;
+        // result.trim = trim;
 
         // Check if ad Exists in DB
-        db.Post.find({ srcURL: result.srcURL }, function(err, docs) {
+        db.Post.find({ srcURL: srcURL }, function(err, docs) {
           if (docs.length) {
-            // console.log("no ad found");
+            console.log("no ad found");
           } else {
             console.log("JA Car ad Found: " + result.srcURL);
+
             // Add Initial Result (/wo IMGS) to db
-            db.Post.create(result).catch(err =>
-              console.log("error in the db in create")
-            ); //end of db create
+            // db.Post.create(result).catch(err =>
+            //   console.log("error in the db in create")
+            // ); //end of db create
+
             // Go out and grab Image Scraper
-            axios
-              .get(result.srcURL)
-              .then(function(response) {
-                var $ = cheerio.load(response.data);
-                var imgs = [];
-                var res = {};
+            // axios
+            //   .get(result.srcURL)
+            //   .then(function(response) {
+            //     var $ = cheerio.load(response.data);
+            //     var imgs = [];
+            //     var res = {};
 
-                $("#theImages")
-                  .children("div")
-                  .each(function(i, element) {
-                    var img = $(this)
-                      .children("a")
-                      .attr("href")
-                      .replace(/(.JPG).*/g, ".JPG")
-                      .trim();
-                    imgs.push(img);
-                  });
+            //     $("#theImages")
+            //       .children("div")
+            //       .each(function(i, element) {
+            //         var img = $(this)
+            //           .children("a")
+            //           .attr("href")
+            //           .replace(/(.JPG).*/g, ".JPG")
+            //           .trim();
+            //         imgs.push(img);
+            //       });
 
-                res.imgs = imgs;
+            //     res.imgs = imgs;
 
-                // find and update imgs
-                db.Post.findOneAndUpdate(
-                  { srcURL: response.config.url },
-                  res
-                ).catch(err =>
-                  console.log("error in the db fnidonandupdate function")
-                ); // end of db findOneandUdpdate
-              })
-              .catch(err =>
-                console.log(
-                  "error in the inner Axios Function, line 332: " +
-                    response.config.url +
-                    " - ad: " +
-                    result.srcURL
-                )
-              ); //end of Axios
+            //     // find and update imgs
+            //     db.Post.findOneAndUpdate(
+            //       { srcURL: response.config.url },
+            //       res
+            //     ).catch(err =>
+            //       console.log("error in the db fnidonandupdate function")
+            //     ); // end of db findOneandUdpdate
+            //   })
+            //   .catch(err =>
+            //     console.log(
+            //       "error in the inner Axios Function, line 332: " +
+            //         response.config.url +
+            //         " - ad: " +
+            //         result.srcURL
+            //     )
+            //   ); //end of Axios
           } // end of else statement
         }); // end db check
       });
     })
-    .catch(err => console.log("err from page scraper axios function"));
-
-  // damage assessment
-  axios.get("https://doubleupja.com/").then(function(response) {
-    var $ = cheerio.load(response.data);
-  });
+    .catch(err => console.log(err));
 
   return "hello from pageScraper";
   // end of crawler
@@ -485,49 +430,8 @@ function pageScraper(element, body) {
 const job = new CronJob(
   "0 */15 * * * *",
   function() {
-    checker();
-    pageScraper(
-      "https://www.jacars.net/?page=browse&bodyType=Convertible",
-      "Convertible"
-    );
-    pageScraper(
-      "https://www.jacars.net/?page=browse&bodyType=Hatchback",
-      "Hatchback"
-    );
-    pageScraper(
-      "https://www.jacars.net/?page=browse&bodyType=Minivan-and-Seven-Seaters",
-      "Minivan"
-    );
-    pageScraper(
-      "https://www.jacars.net/?page=browse&bodyType=4-Door-Sedans",
-      "Sedan"
-    );
-    pageScraper(
-      "https://www.jacars.net/?page=browse&bodyType=2-Door-Sedans-and-Coupes",
-      "Coupe"
-    );
-    pageScraper("https://www.jacars.net/?page=browse&bodyType=SUV", "SUV");
-    pageScraper(
-      "https://www.jacars.net/?page=browse&bodyType=Vans-and-Small-Buses",
-      "Bus"
-    );
-    pageScraper(
-      "https://www.jacars.net/?page=browse&bodyType=Wagon",
-      "stationwagon"
-    );
-    pageScraper(
-      "https://www.jacars.net/?page=browse&bodyType=Pick-Up",
-      "Pickup"
-    );
-    pageScraper(
-      "https://www.jacars.net/?page=browse&bodyType=Large-Buses",
-      "Bus"
-    );
-    pageScraper("https://www.jacars.net/?page=browse&bodyType=Truck", "Truck");
-    pageScraper(
-      "https://www.jacars.net/?page=browse&bodyType=Motorcycle",
-      "Motorcycle"
-    );
+    // checker();
+    pageScraper("https://www.jacars.net/vehicles/");
     console.log("Cron Run, Next Run:");
 
     console.log(this.nextDates());
@@ -537,9 +441,4 @@ const job = new CronJob(
   null,
   null,
   true
-);
-
-pageScraper(
-  "https://www.jacars.net/?page=browse&bodyType=Convertible",
-  "Convertible"
 );
