@@ -29,10 +29,9 @@ app.use(routes);
 app.use(logger("dev"));
 
 // Connect to the Mongo DB
-mongoose.connect(
-  process.env.MONGODB_URI || "mongodb://localhost/helloV1",
-  { useNewUrlParser: true }
-);
+mongoose.connect(process.env.MONGODB_URI || "mongodb://localhost/helloV1", {
+  useNewUrlParser: true
+});
 
 // Start the API server
 app.listen(PORT, function() {
