@@ -507,7 +507,7 @@ function pageScraper(element) {
                 console.log("error in create statement")
               ); //end of db create
             }); // end of axios statement
-          } // end of else statement
+          } // end of else
         }); // end db check
       });
     })
