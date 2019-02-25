@@ -277,142 +277,192 @@ function pageScraper(element) {
         // grab sc URL
         var srcURL = "https://www.jacars.net" + $(this).attr("href");
 
-        console.log(srcURL);
-
         var result = {}; // Save an empty result object
 
-        // var tempTitle = $(this) //  Data Cleanup
-        //   .children("div")
-        //   .children("a")
-        //   .children("div")
-        //   .text()
-        //   .split(" ");
-
-        //  var price = dirtyPrice.replace(/[^0-9.-]+/g, "").trim(); // Clean price
-
         // contactNumberArray = description.match(/Tel:(\W+(\d+))-(\d+)/g); //Contact Number parsers
-
-        //Location parser
-        // parishArr = [
-        //   "Clarendon",
-        //   "Manchester",
-        //   "Westmoreland",
-        //   "Kingston",
-        //   "Saint Catherine",
-        //   "Portland",
-        //   "Hanover",
-        //   "Saint Andrew",
-        //   "Saint Ann",
-        //   "Saint Thomas",
-        //   "Saint Elizabeth",
-        //   "Saint James",
-        //   "Saint Mary",
-        //   "Trelawny"
-        // // ];
-
-        // var parish = "";
-
-        // parishArr.forEach(function(element, i) {
-        //   if (description.match(element) !== null) {
-        //     parish = description.match(element)[0];
-        //     switch (parish) {
-        //       case "Kingston":
-        //         parish = "Kingston/St. Andrew";
-        //         break;
-        //       case "Saint Andrew":
-        //         parish = "Kingston/St. Andrew";
-        //         break;
-        //       case "Saint Ann":
-        //         parish = "St. Ann";
-        //         break;
-        //       case "Saint Catherine":
-        //         parish = "St. Catherine";
-        //         break;
-        //       case "Saint Elizabeth":
-        //         parish = "St. Elizabeth";
-        //         break;
-        //       case "Saint James":
-        //         parish = "St. James";
-        //         break;
-        //       case "Saint Mary":
-        //         parish = "St. Mary";
-        //         break;
-        //       case "Saint Thomas":
-        //         parish = "St. Thomas";
-        //         break;
-        //     }
-        //   }
-        // });
-
-        var dateCaptured = moment().format("YYYYMMDDhhmmss");
-
-        // ================
-        // Update Results object
-        // result.user = "jacars";
-        // result.srcURL = srcURL;
-        // result.postTitle = postTitle;
-        // result.price = price;
-        // result.year = year;
-        // result.make = make;
-        // result.model = model;
-        // result.parish = parish;
-        // result.contactNumber = contactNumber;
-        // result.description = description;
-        // result.posted = false;
-        // result.bodyType = body;
-        // result.transmission = transmission;
-        // result.date = dateCaptured;
-        // result.trim = trim;
 
         // Check if ad Exists in DB
         db.Post.find({ srcURL: srcURL }, function(err, docs) {
           if (docs.length) {
-            console.log("no ad found");
+            // console.log("no ad found");
           } else {
-            console.log("JA Car ad Found: " + result.srcURL);
+            console.log("JA Car ad Found: " + srcURL);
 
-            // Add Initial Result (/wo IMGS) to db
-            // db.Post.create(result).catch(err =>
-            //   console.log("error in the db in create")
-            // ); //end of db create
+            axios.get(srcURL).then(function(response) {
+              var $ = cheerio.load(response.data);
 
-            // Go out and grab Image Scraper
-            // axios
-            //   .get(result.srcURL)
-            //   .then(function(response) {
-            //     var $ = cheerio.load(response.data);
-            //     var imgs = [];
-            //     var res = {};
+              var title = $("#ad-title")
+                .text()
+                .trim();
 
-            //     $("#theImages")
-            //       .children("div")
-            //       .each(function(i, element) {
-            //         var img = $(this)
-            //           .children("a")
-            //           .attr("href")
-            //           .replace(/(.JPG).*/g, ".JPG")
-            //           .trim();
-            //         imgs.push(img);
-            //       });
+              var tempTitle = title.split(" ");
 
-            //     res.imgs = imgs;
+              var make = tempTitle[0];
 
-            //     // find and update imgs
-            //     db.Post.findOneAndUpdate(
-            //       { srcURL: response.config.url },
-            //       res
-            //     ).catch(err =>
-            //       console.log("error in the db fnidonandupdate function")
-            //     ); // end of db findOneandUdpdate
-            //   })
-            //   .catch(err =>
-            //     console.log(
-            //       "error in the inner Axios Function, line 332: " +
-            //         response.config.url +
-            //         " - ad: " +
-            //         result.srcURL
-            //     )
-            //   ); //end of Axios
+              var model = tempTitle[1];
+
+              var year = tempTitle[tempTitle.length - 1];
+
+              var postTitle =
+                year +
+                " " +
+                make +
+                " " +
+                model +
+                " - " +
+                $(".announcement-price__cost")
+                  .text()
+                  .trim();
+
+              var price = $(".announcement-price__cost")
+                .text()
+                .replace(/[^0-9.-]+/g, "")
+                .trim(); // Clean price
+
+              if (price < 10000 && price > 100) {
+                price = price * 1000;
+              }
+
+              var description = $(".announcement-description")
+                .text()
+                .trim();
+
+              var attr = {};
+
+              $(".chars-column > li").each(function(i, element) {
+                subtitle = $(this)
+                  .children("span")
+                  .text();
+                val = $(this)
+                  .children("a")
+                  .text();
+
+                switch (subtitle) {
+                  case "Body type":
+                    attr.bodyType = val;
+                    break;
+                  case "Fuel type":
+                    attr.fuelType = val;
+                    break;
+                  case "Gearbox":
+                    attr.transmission = val;
+                    break;
+                  case "Colour":
+                    attr.colour = val;
+                    break;
+                  case "Right hand drive":
+                    attr.driverSide = val;
+                    break;
+                  case "Engine size":
+                    attr.engineSize = val;
+                    break;
+                  case "Seats":
+                    attr.seats = val;
+                    break;
+                  case "Mileage":
+                    attr.mileage = val;
+                    break;
+                }
+              });
+
+              var imgs = [];
+              $(".announcement-content-container")
+                .children("img")
+                .each(function(i) {
+                  imgs.push(
+                    $(this)
+                      .attr("src")
+                      .trim()
+                  );
+                });
+
+              var location = $(".announcement__location")
+                .children("span")
+                .text();
+
+              //Location parser
+              parishArr = [
+                "Clarendon",
+                "Manchester",
+                "Westmoreland",
+                "Kingston",
+                "Saint Catherine",
+                "Portland",
+                "Hanover",
+                "Saint Andrew",
+                "Saint Ann",
+                "Saint Thomas",
+                "Saint Elizabeth",
+                "Saint James",
+                "Saint Mary",
+                "Trelawny"
+              ];
+
+              var parish = "";
+
+              parishArr.forEach(function(element, i) {
+                if (location.match(element) !== null) {
+                  parish = location.match(element)[0];
+                  switch (parish) {
+                    case "Kingston":
+                      parish = "Kingston/St. Andrew";
+                      break;
+                    case "Saint Andrew":
+                      parish = "Kingston/St. Andrew";
+                      break;
+                    case "Saint Ann":
+                      parish = "St. Ann";
+                      break;
+                    case "Saint Catherine":
+                      parish = "St. Catherine";
+                      break;
+                    case "Saint Elizabeth":
+                      parish = "St. Elizabeth";
+                      break;
+                    case "Saint James":
+                      parish = "St. James";
+                      break;
+                    case "Saint Mary":
+                      parish = "St. Mary";
+                      break;
+                    case "Saint Thomas":
+                      parish = "St. Thomas";
+                      break;
+                  }
+                }
+              });
+
+              var dateCaptured = moment().format("YYYYMMDDhhmmss");
+
+              // ================
+              // Update Results object
+              result.user = "jacars";
+              result.srcURL = srcURL;
+              result.postTitle = postTitle;
+              result.price = price;
+              result.year = year;
+              result.make = make;
+              result.model = model;
+              result.parish = parish;
+              // result.contactNumber = contactNumber;
+              result.description = description;
+              result.posted = false;
+              result.bodyType = attr.bodyType;
+              result.transmission = attr.transmission;
+              result.date = dateCaptured;
+              result.trim = attr.engineSize;
+              result.driverSide = attr.driverSide;
+              result.mileage = attr.mileage;
+              result.fuelType = attr.fuelType;
+              result.imgs = imgs;
+
+              // console.log(result);
+
+              // Add to database
+              db.Post.create(result).catch(err =>
+                console.log("error in create statement")
+              ); //end of db create
+            }); // end of axios statement
           } // end of else statement
         }); // end db check
       });
@@ -431,7 +481,8 @@ const job = new CronJob(
   "0 */15 * * * *",
   function() {
     // checker();
-    pageScraper("https://www.jacars.net/vehicles/");
+    // pageScraper("https://www.jacars.net/vehicles/");
+    pageScraper("https://www.jacars.net/vehicles/cars/");
     console.log("Cron Run, Next Run:");
 
     console.log(this.nextDates());
