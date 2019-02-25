@@ -36,11 +36,11 @@ router.get("/latest", function(req, res) {
   var query = db.Post.find({}).sort({ _id: -1 });
 
   // verify it has a contact number
-  query.where("contactNumber").ne(null);
+  query.where("contactNumber").ne(null || 0);
   // verify it has at least one image
   query.where("imgs").gt([]);
   // Limit to 500
-  query.limit(500);
+  query.limit(1000);
 
   query.exec(function(err, docs) {
     res.send(docs);
@@ -49,7 +49,7 @@ router.get("/latest", function(req, res) {
 
 // Return count of all listings
 router.get("/count", function(req, res) {
-  db.Post.count(function(err, docs) {
+  db.Post.countDocuments(function(err, docs) {
     response = "";
     response += docs;
     res.send(response);
@@ -88,6 +88,51 @@ module.exports = router;
 // ==========================
 // ========== APP ===========
 // ==========================
+
+// ===========
+// Puppeteer
+// ===========
+const puppeteer = require("puppeteer");
+
+async function puppetMaster(newItem) {
+  const browser = await puppeteer.launch({
+    // headless: false
+    // timeout: 150000,
+    // networkIdleTimout: 150000
+  });
+  const page = await browser.newPage();
+  await page.goto(newItem.srcURL, { waitUntil: "networkidle2" });
+
+  await page.evaluate(() => {
+    $(".phone-author__title").click();
+  });
+
+  await page.evaluate(() => {
+    $(".js-agree-terms-dialog").click();
+  });
+
+  await page.waitFor(1000);
+
+  var html = await page.content();
+
+  var $ = cheerio.load(html);
+  var results = {};
+
+  if ($(".phone-author-subtext__main")[0] === undefined) {
+    results.contactNumber = 0;
+  } else {
+    results.contactNumber = $(".phone-author-subtext__main")
+      .text()
+      .replace(/[^0-9]+/g, "");
+  }
+  await console.log(results);
+
+  // find and update imgs
+  await db.Post.findOneAndUpdate({ srcURL: newItem.srcURL }, results).catch(
+    err => console.log("error in the db fnidonandupdate function")
+  ); // end of db findOneandUdpdate
+  browser.close();
+}
 
 // A - CRAWLER: AUTO ADS CHECKER
 // =====================================
@@ -456,8 +501,6 @@ function pageScraper(element) {
               result.fuelType = attr.fuelType;
               result.imgs = imgs;
 
-              // console.log(result);
-
               // Add to database
               db.Post.create(result).catch(err =>
                 console.log("error in create statement")
@@ -473,6 +516,23 @@ function pageScraper(element) {
   // end of crawler
 }
 
+// D - RetNum: Jamaica Cars
+function retNum() {
+  // Build query to get the lastest listings sorted by date
+  var query = db.Post.find({}).sort({ _id: -1 });
+
+  // verify it has a contact number
+  query.where("contactNumber").eq(null);
+
+  // Limit to 500
+  query.limit(5);
+
+  query.exec(function(err, docs) {
+    docs.forEach(function(element, i) {
+      puppetMaster(element);
+    });
+  });
+}
 // ==========================
 // ====== AUTOMATION ========
 // ==========================
@@ -480,11 +540,11 @@ function pageScraper(element) {
 const job = new CronJob(
   "0 */15 * * * *",
   function() {
-    // checker();
-    // pageScraper("https://www.jacars.net/vehicles/");
-    pageScraper("https://www.jacars.net/vehicles/cars/");
-    console.log("Cron Run, Next Run:");
+    checker(); // Start Auto Ads
+    pageScraper("https://www.jacars.net/vehicles/cars/"); // Start jaCArs Ads
+    retNum(); // ContactCleaner
 
+    console.log("Cron Run, Next Run:");
     console.log(this.nextDates());
   },
   null,
