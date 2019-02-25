@@ -530,7 +530,9 @@ function retNum() {
 
   query.exec(function(err, docs) {
     docs.forEach(function(element, i) {
-      puppetMaster(element);
+      puppetMaster(element).catch(err => {
+        console.log(err);
+      });
     });
   });
 }
