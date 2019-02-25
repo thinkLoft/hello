@@ -99,7 +99,6 @@ async function puppetMaster(newItem) {
     // headless: false
     // timeout: 150000,
     // networkIdleTimout: 150000
-    // args: ['--no-sandbox']
     args: ["--no-sandbox", "--disable-setuid-sandbox"]
   });
   const page = await browser.newPage();
