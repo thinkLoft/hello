@@ -125,7 +125,7 @@ async function puppetMaster(newItem) {
       .text()
       .replace(/[^0-9]+/g, "");
   }
-  await console.log(results);
+  await console.log("Contact Number Found");
 
   // find and update imgs
   await db.Post.findOneAndUpdate({ srcURL: newItem.srcURL }, results).catch(
