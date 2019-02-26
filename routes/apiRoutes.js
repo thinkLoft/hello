@@ -384,6 +384,9 @@ function pageScraper(element) {
                   .text();
 
                 switch (subtitle) {
+                  case "Year":
+                    attr.year = val;
+                    break;
                   case "Body type":
                     attr.bodyType = val;
                     break;
@@ -486,7 +489,7 @@ function pageScraper(element) {
               result.srcURL = srcURL;
               result.postTitle = postTitle;
               result.price = price;
-              result.year = year;
+              result.year = attr.year;
               result.make = make;
               result.model = model;
               result.parish = parish;
@@ -504,7 +507,7 @@ function pageScraper(element) {
 
               // Add to database
               db.Post.create(result).catch(err =>
-                console.log("error in create statement")
+                console.log(err + "\nerror in create statement")
               ); //end of db create
             }); // end of axios statement
           } // end of else
