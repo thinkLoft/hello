@@ -94,45 +94,63 @@ module.exports = router;
 // ===========
 const puppeteer = require("puppeteer");
 
-async function puppetMaster(newItem) {
-  const browser = await puppeteer.launch({
-    // headless: false
-    // timeout: 150000,
-    // networkIdleTimout: 150000
-    args: ["--no-sandbox", "--disable-setuid-sandbox"]
-  });
-  const page = await browser.newPage();
-  await page.goto(newItem.srcURL, { waitUntil: "networkidle2" });
+async function puppetMaster(res) {
+  if (res.length > 0) {
+    const browser = await puppeteer.launch({
+      // headless: false
+      // timeout: 150000,
+      // networkIdleTimout: 150000
+      args: ["--no-sandbox", "--disable-setuid-sandbox"]
+    });
+    const page = await browser.newPage();
 
-  await page.evaluate(() => {
-    $(".phone-author__title").click();
-  });
+    var firstRun = true;
+    var count = 0;
 
-  await page.evaluate(() => {
-    $(".js-agree-terms-dialog").click();
-  });
+    for (let newItem of res) {
+      count++;
+      await page.goto(newItem.srcURL, { waitUntil: "networkidle2" });
+      // await console.log("1: got to page");
+      await page.evaluate(() => {
+        $(".phone-author__title").click();
+      });
+      // await console.log("2: clicked phone");
+      if (firstRun) {
+        await page.evaluate(() => {
+          $(".js-agree-terms-dialog").click();
+        });
+        firstRun = false;
+        await console.log("Accepted");
+      }
 
-  await page.waitFor(1000);
+      await page.waitFor(500);
+      // await console.log("a: waited");
+      const html = await page.content();
+      // await console.log("b: saved");
+      const $ = await cheerio.load(html);
+      // await console.log("c: parsed");
+      var results = {};
+      // await console.log("3: grabbed content");
+      if ($(".phone-author-subtext__main")[0] === undefined) {
+        results.contactNumber = 0;
+        // await console.log("4: no Number");
+      } else {
+        results.contactNumber = $(".phone-author-subtext__main")
+          .text()
+          .replace(/[^0-9]+/g, "");
+        await console.log("Contact Number Found: #" + count);
+      }
 
-  var html = await page.content();
+      // find and update imgs
+      await db.Post.findOneAndUpdate({ srcURL: newItem.srcURL }, results).catch(
+        err => console.log("error in the contacts db findAndUpdate function")
+      ); // end of db findOneandUdpdate
+      await console.log("added to db: " + newItem.postTitle);
+    } // end of for loop statement
 
-  var $ = cheerio.load(html);
-  var results = {};
-
-  if ($(".phone-author-subtext__main")[0] === undefined) {
-    results.contactNumber = 0;
-  } else {
-    results.contactNumber = $(".phone-author-subtext__main")
-      .text()
-      .replace(/[^0-9]+/g, "");
-  }
-  await console.log("Contact Number Found");
-
-  // find and update imgs
-  await db.Post.findOneAndUpdate({ srcURL: newItem.srcURL }, results).catch(
-    err => console.log("error in the db fnidonandupdate function")
-  ); // end of db findOneandUdpdate
-  browser.close();
+    await browser.close();
+    console.log("browser closed");
+  } // End if Statement
 }
 
 // A - CRAWLER: AUTO ADS CHECKER
@@ -531,12 +549,17 @@ function retNum() {
   // Limit to 500
   query.limit(5);
 
-  query.exec(function(err, docs) {
-    docs.forEach(function(element, i) {
-      puppetMaster(element).catch(err => {
-        console.log(err);
-      });
-    });
+  query.exec(async function(err, docs) {
+    // docs.forEach(async function(element, i) {
+    //   await puppetMaster(element).catch(err => {
+    //     console.log(err);
+    //   });
+    // });
+    // for (let i of docs) {
+    //   await puppetMaster(i);
+    // }
+
+    puppetMaster(docs);
   });
 }
 // ==========================
@@ -547,7 +570,7 @@ const job = new CronJob(
   "0 */15 * * * *",
   function() {
     checker(); // Start Auto Ads
-    pageScraper("https://www.jacars.net/vehicles/cars/"); // Start jaCArs Ads
+    pageScraper("https://www.jacars.net/vehicles/"); // Start jaCArs Ads
     retNum(); // ContactCleaner
 
     console.log("Cron Run, Next Run:");
