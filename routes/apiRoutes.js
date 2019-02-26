@@ -36,7 +36,10 @@ router.get("/latest", function(req, res) {
   var query = db.Post.find({}).sort({ _id: -1 });
 
   // verify it has a contact number
-  query.where("contactNumber").ne(null || 0);
+  query
+    .where("contactNumber")
+    .exists()
+    .ne(null || 0);
   // verify it has at least one image
   query.where("imgs").gt([]);
   // Limit to 500
