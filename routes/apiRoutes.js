@@ -552,18 +552,9 @@ function retNum() {
   query.where("contactNumber").eq(null);
 
   // Limit to 500
-  query.limit(15);
+  query.limit(3);
 
   query.exec(async function(err, docs) {
-    // docs.forEach(async function(element, i) {
-    //   await puppetMaster(element).catch(err => {
-    //     console.log(err);
-    //   });
-    // });
-    // for (let i of docs) {
-    //   await puppetMaster(i);
-    // }
-
     puppetMaster(docs);
   });
 }
