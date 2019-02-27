@@ -126,12 +126,12 @@ async function puppetMaster(res) {
         await console.log("Accepted");
       }
 
-      await page.waitFor(500);
-      // await console.log("a: waited");
-      const html = await page.content();
-      // await console.log("b: saved");
-      const $ = await cheerio.load(html);
-      // await console.log("c: parsed");
+      await page.waitFor(800);
+      await console.log("a: waited");
+      var html = await page.content();
+      await console.log("b: saved");
+      var $ = await cheerio.load(html);
+      await console.log("c: parsed");
       var results = {};
       // await console.log("3: grabbed content");
       if ($(".phone-author-subtext__main")[0] === undefined) {
@@ -141,7 +141,9 @@ async function puppetMaster(res) {
         results.contactNumber = $(".phone-author-subtext__main")
           .text()
           .replace(/[^0-9]+/g, "");
-        await console.log("Contact Number Found: #" + count);
+        await console.log(
+          "Contact Number Found: #" + count + " - " + results.contactNumber
+        );
       }
 
       // find and update imgs
@@ -154,7 +156,6 @@ async function puppetMaster(res) {
     await browser.close();
     console.log("browser closed");
   } // End if Statement
-  console.log(browser.browserContexts());
 }
 
 // A - CRAWLER: AUTO ADS CHECKER
@@ -551,7 +552,7 @@ function retNum() {
   query.where("contactNumber").eq(null);
 
   // Limit to 500
-  query.limit(5);
+  query.limit(15);
 
   query.exec(async function(err, docs) {
     // docs.forEach(async function(element, i) {
