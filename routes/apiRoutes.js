@@ -100,10 +100,10 @@ const puppeteer = require("puppeteer");
 async function puppetMaster(res) {
   if (res.length > 0) {
     const browser = await puppeteer.launch({
-      // headless: false
+      headless: false
       // timeout: 150000,
       // networkIdleTimout: 150000
-      args: ["--no-sandbox", "--disable-setuid-sandbox"]
+      // args: ["--no-sandbox", "--disable-setuid-sandbox"]
     });
     const page = await browser.newPage();
 
