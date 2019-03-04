@@ -348,8 +348,6 @@ function pageScraper(element) {
 
         var result = {}; // Save an empty result object
 
-        // contactNumberArray = description.match(/Tel:(\W+(\d+))-(\d+)/g); //Contact Number parsers
-
         // Check if ad Exists in DB
         db.Post.find({ srcURL: srcURL }, function(err, docs) {
           if (docs.length) {
@@ -544,6 +542,7 @@ function pageScraper(element) {
 }
 
 // D - RetNum: Jamaica Cars
+// =====================================
 function retNum() {
   // Build query to get the lastest listings sorted by date
   var query = db.Post.find({}).sort({ _id: -1 });
@@ -558,6 +557,125 @@ function retNum() {
     puppetMaster(docs);
   });
 }
+
+// E - Scraper: Jamaican Cars Online
+// =====================================
+
+function scaperJCO(link) {
+  axios.get(link).then(function(response) {
+    var $ = cheerio.load(response.data);
+    var result = {};
+
+    // Search for each item
+    $(".jco-card > a").each(function(i) {
+      // filter out external links
+      if (
+        $(this)
+          .attr("href")
+          .startsWith("https://jamaicaclassifiedonline.com/auto/cars")
+      ) {
+        var result = {}; // start building result object
+
+        var srcURL = $(this).attr("href");
+
+        // Check if ad Exists in DB
+        db.Post.find({ srcURL: srcURL }, function(err, docs) {
+          if (docs.length) {
+            // console.log("no ad found");
+          } else {
+            axios.get(srcURL).then(function(response) {
+              // console.log("JCO ad found - " + srcURL);
+              var $ = cheerio.load(response.data);
+
+              var title = $("#title")
+                .text()
+                .replace(/For Sale: */g, "")
+                .trim();
+
+              // Object to hold attributes
+              var attr = {};
+
+              // Check through Information Section
+              $("li.collection-item ").each(function(i) {
+                var subtitle = $(this)
+                  .children("div")
+                  .text()
+                  .replace(/:\W*.*/g, "")
+                  .trim();
+                var val = $(this)
+                  .children("div")
+                  .children("a")
+                  .text()
+                  .trim();
+
+                switch (subtitle) {
+                  case "Year":
+                    attr.year = yearCheck(val);
+                    break;
+                  case "Make":
+                    attr.make = val;
+                    break;
+                  case "Model":
+                    attr.model = val;
+                    break;
+                  case "Body Type":
+                    attr.bodyType = val;
+                    break;
+                  case "Fuel Type":
+                    attr.fuelType = val;
+                    break;
+                  case "Transmission":
+                    attr.transmission = val;
+                    break;
+                  case "Driver Side":
+                    attr.driverSide = val;
+                    break;
+                }
+              }); // end of Information section loop
+
+              if (attr.year == undefined) {
+                // filter empty posts
+              } else {
+                // continue
+                console.log(attr);
+              } // end if statement
+            }); // end second Axios statement
+          }
+        }); // end db find statement
+      } // end filter for ex  ternal links
+    }); // end search for each item
+  }); // end axio function
+} // function end
+
+// ==========================
+// ==== QUALITY CONTROL =====
+// ==========================
+
+function dbCheck(srcURL) {
+  var res;
+
+  // Check if ad Exists in DB
+  db.Post.find({ srcURL: srcURL }, function(err, docs) {
+    if (docs.length) {
+      res = false; // console.log("no ad found");
+    } else {
+      res = true;
+    }
+  });
+
+  console.log(res);
+}
+
+// Year Checker for digit and between range
+function yearCheck(year) {
+  if (isNaN(year)) {
+    // console.log("false: Not a number");
+    return null;
+  } else if (year <= 1935 || year >= 2100) {
+    // console.log("false: not between 1935-2100");
+    return null;
+  } else return year;
+}
 // ==========================
 // ====== AUTOMATION ========
 // ==========================
@@ -565,9 +683,10 @@ function retNum() {
 const job = new CronJob(
   "0 */15 * * * *",
   function() {
-    checker(); // Start Auto Ads
-    pageScraper("https://www.jacars.net/vehicles/"); // Start jaCArs Ads
-    retNum(); // ContactCleaner
+    // checker(); // Start Auto Ads
+    // pageScraper("https://www.jacars.net/vehicles/"); // Start jaCArs Ads
+    // retNum(); // ContactCleaner
+    scaperJCO("https://jamaicaclassifiedonline.com/auto/cars/");
 
     console.log("Cron Run, Next Run:");
     console.log(this.nextDates());
