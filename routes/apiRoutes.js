@@ -637,7 +637,25 @@ function scaperJCO(link) {
                 // filter empty posts
               } else {
                 // continue
-                console.log(attr);
+                // console.log(attr);
+                $("div.col.s12.l3.m6.flow-text").each(function(i) {
+                  if (
+                    $(this)
+                      .children("a")
+                      .attr("href") !== undefined &&
+                    $(this)
+                      .children("a")
+                      .attr("href")
+                      .startsWith("tel:")
+                  ) {
+                    attr.contactNumber = $(this)
+                      .children("a")
+                      .attr("href")
+                      .replace(/tel:/g, "")
+                      .trim();
+                    console.log(attr.contactNumber);
+                  }
+                });
               } // end if statement
             }); // end second Axios statement
           }
