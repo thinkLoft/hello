@@ -639,6 +639,7 @@ function scaperJCO(link) {
                 // continue
                 // console.log(attr);
                 $("div.col.s12.l3.m6.flow-text").each(function(i) {
+                  // Get Number
                   if (
                     $(this)
                       .children("a")
@@ -653,10 +654,28 @@ function scaperJCO(link) {
                       .attr("href")
                       .replace(/tel:/g, "")
                       .trim();
-                    console.log(attr.contactNumber);
-                  }
-                });
-              } // end if statement
+                  } // end of get contact number function
+
+                  // Get Price
+                  if (
+                    $(this)
+                      .last()
+                      .contents()
+                      .text()
+                      .trim()
+                      .replace(/(\W)*\$/g, "$")
+                      .startsWith("$")
+                  ) {
+                    attr.price = $(this)
+                      .last()
+                      .contents()
+                      .text()
+                      .trim()
+                      .replace(/[^0-9.-]+/g, "");
+                    console.log(attr.price);
+                  } // end of get price function
+                }); // end of each title area function
+              } // end if year empty statement
             }); // end second Axios statement
           }
         }); // end db find statement
