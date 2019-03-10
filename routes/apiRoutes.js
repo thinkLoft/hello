@@ -289,8 +289,6 @@ function scraper(link) {
       imgs.push($(this).attr("href"));
     });
 
-    var dateCaptured = moment().format("YYYYMMDDhhmmss");
-
     // Update Results object
     result.user = "autoadsja";
     result.srcURL = response.config.url;
@@ -311,7 +309,6 @@ function scraper(link) {
     result.fuelType = fuelType;
     result.engineSize = engineSize;
     result.mileage = mileage;
-    result.date = dateCaptured;
     result.trim = trim;
     result.posted = false;
 
@@ -443,59 +440,8 @@ function pageScraper(element) {
                 .children("span")
                 .text();
 
-              //Location parser
-              parishArr = [
-                "Clarendon",
-                "Manchester",
-                "Westmoreland",
-                "Kingston",
-                "Saint Catherine",
-                "Portland",
-                "Hanover",
-                "Saint Andrew",
-                "Saint Ann",
-                "Saint Thomas",
-                "Saint Elizabeth",
-                "Saint James",
-                "Saint Mary",
-                "Trelawny"
-              ];
-
-              var parish = "";
-
-              parishArr.forEach(function(element, i) {
-                if (location.match(element) !== null) {
-                  parish = location.match(element)[0];
-                  switch (parish) {
-                    case "Kingston":
-                      parish = "Kingston/St. Andrew";
-                      break;
-                    case "Saint Andrew":
-                      parish = "Kingston/St. Andrew";
-                      break;
-                    case "Saint Ann":
-                      parish = "St. Ann";
-                      break;
-                    case "Saint Catherine":
-                      parish = "St. Catherine";
-                      break;
-                    case "Saint Elizabeth":
-                      parish = "St. Elizabeth";
-                      break;
-                    case "Saint James":
-                      parish = "St. James";
-                      break;
-                    case "Saint Mary":
-                      parish = "St. Mary";
-                      break;
-                    case "Saint Thomas":
-                      parish = "St. Thomas";
-                      break;
-                  }
-                }
-              });
-
-              var dateCaptured = moment().format("YYYYMMDDhhmmss");
+              var parish = parishCheck(location);
+              console.log("jacars: " + parish);
 
               // ================
               // Update Results object
@@ -512,7 +458,7 @@ function pageScraper(element) {
               result.posted = false;
               result.bodyType = attr.bodyType;
               result.transmission = attr.transmission;
-              result.date = dateCaptured;
+              // result.date = dateCaptured;
               result.trim = attr.engineSize;
               result.driverSide = attr.driverSide;
               result.mileage = attr.mileage;
@@ -745,11 +691,7 @@ function scaperJCO(link) {
 function nullCheck(x) {
   var res = x;
   res.posted = true;
-
-  // if (res.imgs === undefined || res.imgs.length == 0) {
-  //   console.log(res.user + ": no imgs"); // array empty or does not exist
-  //   res.posted = false;
-  // }
+  res.date = moment().format("YYYYMMDDhhmmss");
 
   if (res.price === undefined || res.price === null) {
     console.log(res.user + ": no price");
@@ -779,8 +721,10 @@ function nullCheck(x) {
 
     res.posted = false;
   }
+
   console.log(res.user + " Verdict: " + res.posted + " (" + res.srcURL + ")");
 }
+
 // Year Checker for digit and between range
 function yearCheck(year) {
   if (isNaN(year)) {
@@ -793,10 +737,12 @@ function yearCheck(year) {
 }
 
 function parishCheck(location) {
-  var parish = "";
+  var parish = undefined;
 
   if (location == undefined) {
     //do nothing
+  } else if (location.startsWith("Saint Andrew")) {
+    parish = "Kingston/St. Andrew";
   } else if (location.startsWith("Saint ")) {
     parish = location.replace(/Saint /g, "St. ");
   } else if (location.startsWith("St")) {
