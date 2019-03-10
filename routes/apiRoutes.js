@@ -215,7 +215,10 @@ function scraper(link) {
       .replace(/\-.*/g, "")
       .trim();
 
-    if ($(".per-detail > ul > li") !== undefined) {
+    if (
+      $(".per-detail > ul > li") !== undefined &&
+      $(".per-detail > ul > li")[0] !== undefined
+    ) {
       // Check array undefined to catch err from array
       var location = $(".per-detail > ul > li")[0]
         .children[0].data.replace("Location: ", "")
@@ -587,16 +590,11 @@ function scaperJCO(link) {
               // console.log("JCO ad found - " + srcURL);
               var $ = cheerio.load(response.data);
 
-              var title = $("#title")
-                .text()
-                .replace(/For Sale: */g, "")
-                .trim();
-
               // Object to hold attributes
               var attr = {};
 
               // Check through Information Section
-              $("li.collection-item ").each(function(i) {
+              $("li.collection-item ").each(function() {
                 var subtitle = $(this)
                   .children("div")
                   .text()
@@ -636,8 +634,8 @@ function scaperJCO(link) {
               if (attr.year == undefined) {
                 // filter empty posts
               } else {
-                // continue
-                // console.log(attr);
+                console.log("JCO Ad found: " + srcURL);
+                // Target Information Area
                 $("div.col.s12.l3.m6.flow-text").each(function(i) {
                   // Get Number
                   if (
@@ -672,10 +670,74 @@ function scaperJCO(link) {
                       .text()
                       .trim()
                       .replace(/[^0-9.-]+/g, "");
-                    console.log(attr.price);
                   } // end of get price function
+
+                  // Get dirty parish
+                  if (
+                    $(this)
+                      .last()
+                      .contents()
+                      .text()
+                      .replace(/(\W)*/g, "")
+                      .trim()
+                      .startsWith("map")
+                  ) {
+                    attr.parish = parishCheck(
+                      $(this)
+                        .last()
+                        .contents()
+                        .text()
+                        .replace(/(\W)*map/g, "")
+                        .trim()
+                    );
+                  }
+                  // end of get parish
                 }); // end of each title area function
+
+                // Get Description
+                attr.description = $("div.wysiwyg")
+                  .text()
+                  .trim();
+
+                // get Features area
+                $("span.card-title").each(function() {
+                  if (
+                    $(this)
+                      .text()
+                      .startsWith("FEATURES")
+                  ) {
+                    attr.description +=
+                      "\n\n" +
+                      $(this)
+                        .next()
+                        .text()
+                        .trim();
+                  }
+                }); // end of features area
+
+                // Get Images
+                var imgs = [];
+                $("a.item-images").each(function() {
+                  imgs.push($(this).attr("href"));
+                });
               } // end if year empty statement
+
+              // Build title
+              attr.postTitle = $("#title")
+                .text()
+                .replace(/For Sale: /g, "")
+                .trim();
+
+              // Build Results Object
+              attr.user = "jamaicaonlineclassifieds";
+              attr.srcURL = srcURL;
+              attr.imgs = imgs;
+              attr.date = moment().format("YYYYMMDDhhmmss");
+
+              // Add to database
+              db.Post.create(attr).catch(err =>
+                console.log(err + "\nerror in create statement")
+              ); //end of db create
             }); // end second Axios statement
           }
         }); // end db find statement
@@ -713,6 +775,22 @@ function yearCheck(year) {
     return null;
   } else return year;
 }
+
+function parishCheck(location) {
+  var parish = "";
+
+  if (location == undefined) {
+    //do nothing
+  } else if (location.startsWith("St")) {
+    parish = location.replace(/St /g, "St. ");
+  } else if (location.startsWith("Kingston")) {
+    parish = "Kingston/St. Andrew";
+  } else {
+    parish = location;
+  }
+
+  return parish;
+}
 // ==========================
 // ====== AUTOMATION ========
 // ==========================
@@ -720,9 +798,9 @@ function yearCheck(year) {
 const job = new CronJob(
   "0 */15 * * * *",
   function() {
-    // checker(); // Start Auto Ads
-    // pageScraper("https://www.jacars.net/vehicles/"); // Start jaCArs Ads
-    // retNum(); // ContactCleaner
+    checker(); // Start Auto Ads
+    pageScraper("https://www.jacars.net/vehicles/"); // Start jaCArs Ads
+    retNum(); // ContactCleaner
     scaperJCO("https://jamaicaclassifiedonline.com/auto/cars/");
 
     console.log("Cron Run, Next Run:");
