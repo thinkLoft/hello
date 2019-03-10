@@ -550,8 +550,11 @@ function retNum() {
   // Build query to get the lastest listings sorted by date
   var query = db.Post.find({}).sort({ _id: -1 });
 
-  // verify it has a contact number
+  // verify if has a contact number
   query.where("contactNumber").eq(null);
+
+  // verify it has a contact number
+  query.where("user").eq("jacars");
 
   // Limit to 500
   query.limit(3);
@@ -567,7 +570,6 @@ function retNum() {
 function scaperJCO(link) {
   axios.get(link).then(function(response) {
     var $ = cheerio.load(response.data);
-    var result = {};
 
     // Search for each item
     $(".jco-card > a").each(function(i) {
@@ -577,8 +579,6 @@ function scaperJCO(link) {
           .attr("href")
           .startsWith("https://jamaicaclassifiedonline.com/auto/cars")
       ) {
-        var result = {}; // start building result object
-
         var srcURL = $(this).attr("href");
 
         // Check if ad Exists in DB
@@ -734,10 +734,11 @@ function scaperJCO(link) {
               attr.imgs = imgs;
               attr.date = moment().format("YYYYMMDDhhmmss");
 
-              // Add to database
-              db.Post.create(attr).catch(err =>
-                console.log(err + "\nerror in create statement")
-              ); //end of db create
+              nullCheck(attr);
+              // // Add to database
+              // db.Post.create(attr).catch(err =>
+              //   console.log(err + "\nerror in create statement")
+              // ); //end of db create
             }); // end second Axios statement
           }
         }); // end db find statement
@@ -750,21 +751,22 @@ function scaperJCO(link) {
 // ==== QUALITY CONTROL =====
 // ==========================
 
-function dbCheck(srcURL) {
-  var res;
+function nullCheck(x) {
+  var res = x;
+  res.posted = true;
 
-  // Check if ad Exists in DB
-  db.Post.find({ srcURL: srcURL }, function(err, docs) {
-    if (docs.length) {
-      res = false; // console.log("no ad found");
-    } else {
-      res = true;
-    }
-  });
+  if (res.imgs === undefined || res.imgs.length == 0) {
+    console.log("no imgs"); // array empty or does not exist
+    res.posted = false;
+  }
 
-  console.log(res);
+  if (res.price === undefined || res.price === null) {
+    console.log("no price");
+    res.posted = false;
+  }
+
+  console.log("Verdict: " + res.posted);
 }
-
 // Year Checker for digit and between range
 function yearCheck(year) {
   if (isNaN(year)) {
@@ -801,8 +803,7 @@ const job = new CronJob(
     checker(); // Start Auto Ads
     pageScraper("https://www.jacars.net/vehicles/"); // Start jaCArs Ads
     retNum(); // ContactCleaner
-    scaperJCO("https://jamaicaclassifiedonline.com/auto/cars/");
-
+    scaperJCO("https://jamaicaclassifiedonline.com/auto/cars/4");
     console.log("Cron Run, Next Run:");
     console.log(this.nextDates());
   },
