@@ -101,8 +101,6 @@ async function puppetMaster(res) {
   if (res.length > 0) {
     const browser = await puppeteer.launch({
       // headless: false
-      // timeout: 150000,
-      // networkIdleTimout: 150000
       args: ["--no-sandbox", "--disable-setuid-sandbox"]
     });
     const page = await browser.newPage();
@@ -113,25 +111,19 @@ async function puppetMaster(res) {
     for (let newItem of res) {
       count++;
       await page.goto(newItem.srcURL, { waitUntil: "networkidle2" });
-      // await console.log("1: got to page");
       await page.evaluate(() => {
         $(".phone-author__title").click();
       });
-      // await console.log("2: clicked phone");
       if (firstRun) {
         await page.evaluate(() => {
           $(".js-agree-terms-dialog").click();
         });
         firstRun = false;
-        await console.log("Accepted");
       }
 
       await page.waitFor(800);
-      await console.log("a: waited");
       var html = await page.content();
-      await console.log("b: saved");
       var $ = await cheerio.load(html);
-      await console.log("c: parsed");
       var results = {};
       // await console.log("3: grabbed content");
       if ($(".phone-author-subtext__main")[0] === undefined) {
@@ -154,7 +146,7 @@ async function puppetMaster(res) {
     } // end of for loop statement
 
     await browser.close();
-    console.log("browser closed");
+    console.log("browser closed\n=====");
   } // End if Statement
 }
 
@@ -175,7 +167,7 @@ function checker() {
         if (docs.length) {
           // no ad found
         } else {
-          console.log("Ad Found: " + srcURL);
+          // console.log("Ad Found: " + srcURL);
           scraper(srcURL);
         }
       });
@@ -323,15 +315,13 @@ function scraper(link) {
     result.trim = trim;
     result.posted = false;
 
+    nullCheck(result);
     // create new row in database
-    db.Post.create(result).catch(err => console.log(err));
+    // db.Post.create(result).catch(err => console.log(err));
 
-    console.log("Auto Ad Scraped: " + result.srcURL);
+    // console.log("Auto Ad Scraped: " + result.srcURL);
   });
-  // damage assessment
-  axios.get("https://doubleupja.com/").then(function(response) {
-    var $ = cheerio.load(response.data);
-  });
+
   return "hello from pageCrawler";
   // end of crawler
 }
@@ -356,7 +346,7 @@ function pageScraper(element) {
           if (docs.length) {
             // console.log("no ad found");
           } else {
-            console.log("JA Car ad Found: " + srcURL);
+            // console.log("JA Car ad Found: " + srcURL);
 
             axios.get(srcURL).then(function(response) {
               var $ = cheerio.load(response.data);
@@ -513,7 +503,7 @@ function pageScraper(element) {
               result.srcURL = srcURL;
               result.postTitle = postTitle;
               result.price = price;
-              result.year = attr.year;
+              result.year = yearCheck(attr.year);
               result.make = make;
               result.model = model;
               result.parish = parish;
@@ -529,10 +519,11 @@ function pageScraper(element) {
               result.fuelType = attr.fuelType;
               result.imgs = imgs;
 
+              nullCheck(result);
               // Add to database
-              db.Post.create(result).catch(err =>
-                console.log(err + "\nerror in create statement")
-              ); //end of db create
+              // db.Post.create(result).catch(err =>
+              //   console.log(err + "\nerror in create statement")
+              // ); //end of db create
             }); // end of axios statement
           } // end of else
         }); // end db check
@@ -634,7 +625,7 @@ function scaperJCO(link) {
               if (attr.year == undefined) {
                 // filter empty posts
               } else {
-                console.log("JCO Ad found: " + srcURL);
+                // console.log("JCO Ad found: " + srcURL);
                 // Target Information Area
                 $("div.col.s12.l3.m6.flow-text").each(function(i) {
                   // Get Number
@@ -755,17 +746,40 @@ function nullCheck(x) {
   var res = x;
   res.posted = true;
 
-  if (res.imgs === undefined || res.imgs.length == 0) {
-    console.log("no imgs"); // array empty or does not exist
-    res.posted = false;
-  }
+  // if (res.imgs === undefined || res.imgs.length == 0) {
+  //   console.log(res.user + ": no imgs"); // array empty or does not exist
+  //   res.posted = false;
+  // }
 
   if (res.price === undefined || res.price === null) {
-    console.log("no price");
+    console.log(res.user + ": no price");
     res.posted = false;
   }
 
-  console.log("Verdict: " + res.posted);
+  if (res.make === undefined || res.make === null) {
+    console.log(res.user + ": no make");
+
+    res.posted = false;
+  }
+
+  if (res.model === undefined || res.model === null) {
+    console.log(res.user + ": no model");
+
+    res.posted = false;
+  }
+
+  if (res.year === undefined || res.year === null) {
+    console.log(res.user + ": no year");
+
+    res.posted = false;
+  }
+
+  if (res.parish === undefined || res.parish === null) {
+    console.log(res.user + ": no parish");
+
+    res.posted = false;
+  }
+  console.log(res.user + " Verdict: " + res.posted + " (" + res.srcURL + ")");
 }
 // Year Checker for digit and between range
 function yearCheck(year) {
@@ -783,6 +797,8 @@ function parishCheck(location) {
 
   if (location == undefined) {
     //do nothing
+  } else if (location.startsWith("Saint ")) {
+    parish = location.replace(/Saint /g, "St. ");
   } else if (location.startsWith("St")) {
     parish = location.replace(/St /g, "St. ");
   } else if (location.startsWith("Kingston")) {
