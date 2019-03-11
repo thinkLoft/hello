@@ -15,7 +15,20 @@ const path = require("path");
 
 // Require all models
 const db = require("../models");
-const fields = ["srcURL", "year", "make", "model", "trim", "price", "parish"];
+const fields = [
+  "srcURL",
+  "year",
+  "make",
+  "model",
+  "trim",
+  "price",
+  "parish",
+  "user",
+  "date",
+  "contactNumber",
+  "posted"
+];
+var carDB = [];
 
 // ==========================
 // ======== Routes ==========
@@ -125,10 +138,8 @@ async function puppetMaster(res) {
       var html = await page.content();
       var $ = await cheerio.load(html);
       var results = {};
-      // await console.log("3: grabbed content");
       if ($(".phone-author-subtext__main")[0] === undefined) {
         results.contactNumber = 0;
-        // await console.log("4: no Number");
       } else {
         results.contactNumber = $(".phone-author-subtext__main")
           .text()
@@ -142,7 +153,6 @@ async function puppetMaster(res) {
       await db.Post.findOneAndUpdate({ srcURL: newItem.srcURL }, results).catch(
         err => console.log("error in the contacts db findAndUpdate function")
       ); // end of db findOneandUdpdate
-      await console.log("added to db: " + newItem.postTitle);
     } // end of for loop statement
 
     await browser.close();
@@ -216,49 +226,41 @@ function scraper(link) {
         .children[0].data.replace("Location: ", "")
         .replace(/\s+/g, "")
         .replace(".", ". ");
-      // console.log(location);
 
       var bodyType = $(".per-detail > ul > li")[1]
         .children[0].data.replace("Body Type: ", "")
         .replace(/\s+/g, "")
         .replace(".", ". ");
-      // console.log(bodyType);
 
       var driverSide = $(".per-detail > ul > li")[2]
         .children[0].data.replace("Driver Side: ", "")
         .replace(/\s+/g, "")
         .replace(".", ". ");
-      // console.log(driverSide);
 
       var driveType = $(".per-detail > ul > li")[3]
         .children[0].data.replace("Drive Type: ", "")
         .replace(/\s+/g, "")
         .replace(".", ". ");
-      // console.log(driveType);
 
       var transmission = $(".per-detail > ul > li")[4]
         .children[0].data.replace("Transmission: ", "")
         .replace(/\s+/g, "")
         .replace(".", ". ");
-      // console.log(transmission);
 
       var fuelType = $(".per-detail > ul > li")[5]
         .children[0].data.replace("Fuel type: ", "")
         .replace(/\s+/g, "")
         .replace(".", ". ");
-      // console.log(fuelType);
 
       var engineSize = $(".per-detail > ul > li")[6]
         .children[0].data.replace("CC rating: ", "")
         .replace(/\s+/g, "")
         .replace(".", ". ");
-      // console.log(engineSize);
 
       var mileage = $(".per-detail > ul > li")[7]
         .children[0].data.replace("Mileage: ", "")
         .replace(/\s+/g, "")
         .replace(".", ". ");
-      // console.log(mileage);
     }
 
     var contact = $(".contact_details")
@@ -441,7 +443,6 @@ function pageScraper(element) {
                 .text();
 
               var parish = parishCheck(location);
-              console.log("jacars: " + parish);
 
               // ================
               // Update Results object
@@ -453,12 +454,11 @@ function pageScraper(element) {
               result.make = make;
               result.model = model;
               result.parish = parish;
-              // result.contactNumber = contactNumber;
+
               result.description = description;
               result.posted = false;
               result.bodyType = attr.bodyType;
               result.transmission = attr.transmission;
-              // result.date = dateCaptured;
               result.trim = attr.engineSize;
               result.driverSide = attr.driverSide;
               result.mileage = attr.mileage;
@@ -466,10 +466,6 @@ function pageScraper(element) {
               result.imgs = imgs;
 
               nullCheck(result);
-              // Add to database
-              // db.Post.create(result).catch(err =>
-              //   console.log(err + "\nerror in create statement")
-              // ); //end of db create
             }); // end of axios statement
           } // end of else
         }); // end db check
@@ -524,7 +520,6 @@ function scaperJCO(link) {
             // console.log("no ad found");
           } else {
             axios.get(srcURL).then(function(response) {
-              // console.log("JCO ad found - " + srcURL);
               var $ = cheerio.load(response.data);
 
               // Object to hold attributes
@@ -571,7 +566,6 @@ function scaperJCO(link) {
               if (attr.year == undefined) {
                 // filter empty posts
               } else {
-                // console.log("JCO Ad found: " + srcURL);
                 // Target Information Area
                 $("div.col.s12.l3.m6.flow-text").each(function(i) {
                   // Get Number
@@ -691,38 +685,62 @@ function scaperJCO(link) {
 function nullCheck(x) {
   var res = x;
   res.posted = true;
-  res.date = moment().format("YYYYMMDDhhmmss");
+  res.date = moment().format("YYYYMMDD");
 
   if (res.price === undefined || res.price === null) {
     console.log(res.user + ": no price");
     res.posted = false;
+  } else if (res.price <= 100000 || res.price >= 20000000) {
+    res.posted = false;
+    console.log(res.user + ": price out of range");
   }
 
   if (res.make === undefined || res.make === null) {
     console.log(res.user + ": no make");
-
     res.posted = false;
+  } else {
+    res.make = makeCheck(res.make);
+    if (carDB.includes(res.make)) {
+      res.posted = true; // matches
+    } else {
+      res.posted = false; // no match
+      console.log("no match - " + res.make);
+    }
   }
 
   if (res.model === undefined || res.model === null) {
     console.log(res.user + ": no model");
-
     res.posted = false;
   }
 
   if (res.year === undefined || res.year === null) {
     console.log(res.user + ": no year");
-
     res.posted = false;
+  } else {
+    res.year = yearCheck(res.year);
   }
 
   if (res.parish === undefined || res.parish === null) {
     console.log(res.user + ": no parish");
-
     res.posted = false;
+  } else {
+    res.parish = parishCheck(res.parish);
   }
 
-  console.log(res.user + " Verdict: " + res.posted + " (" + res.srcURL + ")");
+  if (res.posted === false) {
+    console.log(
+      res.user + " Verdict: \n - " + res.posted + " (" + res.srcURL + ")"
+    );
+  }
+
+  updatedb(res); // update Database Call
+} // end nullCheck
+
+function updatedb(result) {
+  // Add to database
+  db.Post.create(result).catch(err =>
+    console.log(err + "\nerror in create statement")
+  ); //end of db create
 }
 
 // Year Checker for digit and between range
@@ -755,6 +773,12 @@ function parishCheck(location) {
 
   return parish;
 }
+
+function makeCheck(make) {
+  if (make.startsWith("Merc")) {
+    return "Mercedes-Benz";
+  } else return make;
+}
 // ==========================
 // ====== AUTOMATION ========
 // ==========================
@@ -765,7 +789,7 @@ const job = new CronJob(
     checker(); // Start Auto Ads
     pageScraper("https://www.jacars.net/vehicles/"); // Start jaCArs Ads
     retNum(); // ContactCleaner
-    scaperJCO("https://jamaicaclassifiedonline.com/auto/cars/4");
+    scaperJCO("https://jamaicaclassifiedonline.com/auto/cars/5");
     console.log("Cron Run, Next Run:");
     console.log(this.nextDates());
   },
@@ -775,3 +799,16 @@ const job = new CronJob(
   null,
   true
 );
+
+axios
+  .get("https://vpic.nhtsa.dot.gov/api/vehicles/getallmakes?format=json")
+  .then(function(results) {
+    data = results.data.Results;
+    data.forEach(function(val, i) {
+      addCar(val.Make_Name);
+    });
+  });
+
+function addCar(car) {
+  carDB.push(car);
+}
