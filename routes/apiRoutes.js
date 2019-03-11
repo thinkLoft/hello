@@ -56,6 +56,9 @@ router.get("/latest", function(req, res) {
   // verify it has at least one image
   query.where("imgs").gt([]);
   // Limit to 500
+
+  query.where("posted").equals(true);
+
   query.limit(1000);
 
   query.exec(function(err, docs) {
@@ -144,10 +147,15 @@ async function puppetMaster(res) {
         results.contactNumber = $(".phone-author-subtext__main")
           .text()
           .replace(/[^0-9]+/g, "");
+
+        results.contactNumber = contactCheck(results.contactNumber);
+
         await console.log(
           "Contact Number Found: #" + count + " - " + results.contactNumber
         );
       }
+
+      results.contactNumber;
 
       // find and update imgs
       await db.Post.findOneAndUpdate({ srcURL: newItem.srcURL }, results).catch(
@@ -156,7 +164,7 @@ async function puppetMaster(res) {
     } // end of for loop statement
 
     await browser.close();
-    console.log("browser closed\n=====");
+    console.log("browser closed\n======");
   } // End if Statement
 }
 
@@ -690,7 +698,7 @@ function nullCheck(x) {
   if (res.price === undefined || res.price === null) {
     console.log(res.user + ": no price");
     res.posted = false;
-  } else if (res.price <= 100000 || res.price >= 20000000) {
+  } else if (parseInt(res.price) < 100000 || res.price > 20000000) {
     res.posted = false;
     console.log(res.user + ": price out of range");
   }
@@ -727,6 +735,21 @@ function nullCheck(x) {
     res.parish = parishCheck(res.parish);
   }
 
+  if (res.driverSide == "Left" || res.driverSide == "LHD") {
+    res.driverSide = "Left Hand Drive";
+  } else {
+    res.driver = "Right Hand Drive";
+  }
+
+  if (
+    res.transmission == "5speedmanual" ||
+    res.transmission == "6speedmanual"
+  ) {
+    res.transmission = "Manual";
+  } else if (res.transmission == "Tipronic") {
+    res.transmission = "Automatic";
+  }
+
   if (res.posted === false) {
     console.log(
       res.user + " Verdict: \n - " + res.posted + " (" + res.srcURL + ")"
@@ -746,10 +769,10 @@ function updatedb(result) {
 // Year Checker for digit and between range
 function yearCheck(year) {
   if (isNaN(year)) {
-    // console.log("false: Not a number");
+    console.log("false: Not a number");
     return null;
   } else if (year <= 1935 || year >= 2100) {
-    // console.log("false: not between 1935-2100");
+    console.log("false: not between 1935-2100");
     return null;
   } else return year;
 }
@@ -775,10 +798,20 @@ function parishCheck(location) {
 }
 
 function makeCheck(make) {
-  if (make.startsWith("Merc")) {
+  if (make.startsWith("Merc") || make.startsWith("Benz")) {
     return "Mercedes-Benz";
   } else return make;
 }
+
+function contactCheck(contactNumber) {
+  if (parseInt(contactNumber, 10) < 10000000) {
+    var areaCode = 1876;
+    areaCode += contactNumber;
+    return areaCode;
+  } else return contactNumber;
+}
+
+function driverSideCheck(driverSide) {}
 // ==========================
 // ====== AUTOMATION ========
 // ==========================
