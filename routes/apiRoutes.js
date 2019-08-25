@@ -76,7 +76,7 @@ router.get("/count", function(req, res) {
 });
 
 router.get("/csv", function(req, res) {
-  db.Post.find({}, function(err, docs) {
+  db.Post.find({}, function(err, docs){
     if (err) {
       return res.status(500).json({ err });
     } else {
@@ -99,7 +99,7 @@ router.get("/csv", function(req, res) {
         }
       });
     }
-  });
+  }).limit(5000);
 });
 
 module.exports = router;
@@ -116,12 +116,12 @@ const puppeteer = require("puppeteer");
 async function puppetMaster(res) {
   if (res.length > 0) {
     const browser = await puppeteer.launch({
-      // headless: false
+      headless: false,
       args: ["--no-sandbox", "--disable-setuid-sandbox"]
     });
     const page = await browser.newPage();
 
-    var firstRun = true;
+    
     var count = 0;
 
     for (let newItem of res) {
@@ -130,12 +130,15 @@ async function puppetMaster(res) {
       await page.evaluate(() => {
         $(".phone-author__title").click();
       });
-      if (firstRun) {
-        await page.evaluate(() => {
-          $(".js-agree-terms-dialog").click();
-        });
-        firstRun = false;
-      }
+//  ---->8/24: turned off prompt on  site
+      // var firstRun = true;
+
+      // if (firstRun) {
+      //   await page.evaluate(() => {
+      //     $(".js-agree-terms-dialog").click();
+      //   });
+      //   firstRun = false;
+      // }
 
       await page.waitFor(800);
       var html = await page.content();
@@ -700,7 +703,7 @@ function nullCheck(x) {
     res.posted = false;
   } else if (parseInt(res.price) < 100000 || res.price > 20000000) {
     res.posted = false;
-    console.log(res.user + ": price out of range");
+    console.log(res.user + ": price out of range: $" + res.price );
   }
 
   if (res.make === undefined || res.make === null) {
@@ -750,6 +753,15 @@ function nullCheck(x) {
     res.transmission = "Automatic";
   }
 
+
+  if (res.contactNumber !== undefined && res.contactNumber.startsWith("1876")){
+    // nothing
+  } else {
+    console.log(res.user + ": bad contact" + res.contactNumber);
+    res.posted = false
+ 
+  }
+
   if (res.posted === false) {
     console.log(
       res.user + " Verdict: \n - " + res.posted + " (" + res.srcURL + ")"
@@ -790,6 +802,8 @@ function parishCheck(location) {
     parish = location.replace(/St /g, "St. ");
   } else if (location.startsWith("Kingston")) {
     parish = "Kingston/St. Andrew";
+  } else if (location.startsWith("OutsideJamaica")) {
+    parish = "Kingston/St. Andrew";
   } else {
     parish = location;
   }
@@ -800,6 +814,14 @@ function parishCheck(location) {
 function makeCheck(make) {
   if (make.startsWith("Merc") || make.startsWith("Benz")) {
     return "Mercedes-Benz";
+  } 
+  
+  else if (make.startsWith("Land")) {
+    return "Land Rover";
+  } 
+
+  else if (make.startsWith("Mini")) {
+    return "Mini Cooper ";
   } else return make;
 }
 
