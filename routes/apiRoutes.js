@@ -480,7 +480,7 @@ function pageScraper(element) {
             }); // end of axios statement
           } // end of else
         }); // end db check
-      });
+      }); // end of crawler
     })
     .catch(err => console.log(err));
 
@@ -689,6 +689,97 @@ function scaperJCO(link) {
   }); // end axio function
 } // function end
 
+// F - Scraper: KMS
+// =====================================
+
+function scraperKMS(link){
+
+  axios.get(link).then(function(response){
+   var $ = cheerio.load(response.data);
+    $("a.inventory").each(function(i, element){
+
+      var srcURL = $(this).attr("href")
+
+     var result = {}
+
+      // Check if ad Exists in DB
+      db.Post.find({ srcURL: srcURL }, function(err, docs) {
+        if (docs.length) {
+          // console.log("EXISTS");
+        } else {
+          // console.log("Found one" + srcURL);
+           
+  axios.get(srcURL).then(function(response){
+    var $ = cheerio.load(response.data);
+  
+    var workingTitle = $('h2[itemprop="name"]').text().trim().split(" ")
+
+    var year = workingTitle[0]
+
+    var make = workingTitle[1]
+
+    var model = workingTitle.slice(2).join(" ")
+
+    var workingPrice = $('span[itemprop="price"]').text()
+
+    workingTitle.push(workingPrice)
+    
+    var postTitle = workingTitle.join(" ")
+    
+    var price = workingPrice.replace(/[^0-9.-]+/g, "")
+    .trim(); // Clean price
+
+    var description = $('#vehicle').text()
+
+    var bodyType = $('.listing_category_body-style').children().eq(1).text().trim()
+
+    var transmission = $('.listing_category_transmission').children().eq(1).text().trim()
+
+    var parish = $('.listing_category_location').children().eq(1).text().trim()
+
+    var trim = $('.listing_category_engine').children().eq(1).text().trim()
+
+    var driverSide = $('.listing_category_drive').children().eq(1).text().trim()
+    
+    var mileage = $('.listing_category_mileage').children().eq(1).text().trim()
+    
+    var imgs = []
+
+
+    $('ul.slides > li > img').each(function(i){
+         imgs.push($(this).attr("src").trim())
+    })
+
+    // =======
+    // Build Results object
+    result.user = "KMS";
+              result.srcURL = srcURL;
+              result.postTitle = postTitle;
+              result.price = price;
+              result.year = yearCheck(year);
+              result.make = make;
+              result.model = model;
+              result.parish = parishCheck(parish);
+              result.description = description;
+              result.posted = false;
+              result.bodyType = bodyType;
+              result.transmission = transmission;
+              result.trim = trim;
+              result.driverSide = driverSide;
+              result.mileage = mileage;
+              result.imgs = imgs;
+              result.contactNumber = "18764331652";
+    nullCheck(result)
+    
+  }) // end of single ad scraper
+        } //end of else
+      }) // end of db check
+    }) // end of crawler
+   
+ }).catch(err => console.log(err))
+
+} // end of scraper KMS function
+
 // ==========================
 // ==== QUALITY CONTROL =====
 // ==========================
@@ -701,7 +792,7 @@ function nullCheck(x) {
   if (res.price === undefined || res.price === null) {
     console.log(res.user + ": no price");
     res.posted = false;
-  } else if (parseInt(res.price) < 100000 || res.price > 20000000) {
+  } else if (parseInt(res.price) < 100000 || res.price > 30000000) {
     res.posted = false;
     console.log(res.user + ": price out of range: $" + res.price );
   }
@@ -844,7 +935,8 @@ const job = new CronJob(
     checker(); // Start Auto Ads
     pageScraper("https://www.jacars.net/vehicles/"); // Start jaCArs Ads
     retNum(); // ContactCleaner
-    scaperJCO("https://jamaicaclassifiedonline.com/auto/cars/5");
+    scaperJCO("https://jamaicaclassifiedonline.com/auto/cars/1");
+    scraperKMS("https://khaleelmotorsports.com/inventory/?listing_order=exterior-color&listing_orderby=DESC&paged=3")
     console.log("Cron Run, Next Run:");
     console.log(this.nextDates());
   },
@@ -855,6 +947,7 @@ const job = new CronJob(
   true
 );
 
+// CAR QUERY VALIDATOR
 axios
   .get("https://vpic.nhtsa.dot.gov/api/vehicles/getallmakes?format=json")
   .then(function(results) {
