@@ -76,7 +76,7 @@ router.get("/count", function(req, res) {
 });
 
 router.get("/csv", function(req, res) {
-  db.Post.find({}, function(err, docs){
+  db.Post.find({}, function(err, docs) {
     if (err) {
       return res.status(500).json({ err });
     } else {
@@ -121,7 +121,6 @@ async function puppetMaster(res) {
     });
     const page = await browser.newPage();
 
-    
     var count = 0;
 
     for (let newItem of res) {
@@ -130,7 +129,7 @@ async function puppetMaster(res) {
       await page.evaluate(() => {
         $(".phone-author__title").click();
       });
-//  ---->8/24: turned off prompt on  site
+      //  ---->8/24: turned off prompt on  site
       // var firstRun = true;
 
       // if (firstRun) {
@@ -161,8 +160,11 @@ async function puppetMaster(res) {
       results.contactNumber;
 
       // find and update imgs
-      await db.Post.findOneAndUpdate({ srcURL: newItem.srcURL }, results).catch(
-        err => console.log("error in the contacts db findAndUpdate function")
+      await db.Post.findOneAndUpdate(
+        { srcURL: newItem.srcURL },
+        results
+      ).catch(err =>
+        console.log("error in the contacts db findAndUpdate function")
       ); // end of db findOneandUdpdate
     } // end of for loop statement
 
@@ -692,92 +694,124 @@ function scaperJCO(link) {
 // F - Scraper: KMS
 // =====================================
 
-function scraperKMS(link){
+function scraperKMS(link) {
+  //crawler
+  axios
+    .get(link)
+    .then(function(response) {
+      var $ = cheerio.load(response.data);
 
-  axios.get(link).then(function(response){
-   var $ = cheerio.load(response.data);
-    $("a.inventory").each(function(i, element){
+      $("div.blog-title > h2 > a").each(function(i, element) {
+        var srcURL = $(this).attr("href");
 
-      var srcURL = $(this).attr("href")
+        if (srcURL.search("listing") != -1) {
+          // Check if ad Exists in DB
+          db.Post.find({ srcURL: srcURL }, function(err, docs) {
+            if (docs.length) {
+              console.log("EXISTS");
+            } else {
+              console.log("nope it new");
 
-     var result = {}
+              var result = {};
+              axios.get(srcURL).then(function(response) {
+                var $ = cheerio.load(response.data);
 
-      // Check if ad Exists in DB
-      db.Post.find({ srcURL: srcURL }, function(err, docs) {
-        if (docs.length) {
-          // console.log("EXISTS");
+                var workingTitle = $('h2[itemprop="name"]')
+                  .text()
+                  .trim()
+                  .split(" ");
+
+                var year = workingTitle[0];
+
+                var make = workingTitle[1];
+
+                var model = workingTitle.slice(2).join(" ");
+
+                var workingPrice = $('span[itemprop="price"]').text();
+
+                workingTitle.push(workingPrice);
+
+                var postTitle = workingTitle.join(" ");
+
+                var price = workingPrice.replace(/[^0-9.-]+/g, "").trim(); // Clean price
+
+                var description = $("#vehicle").text();
+
+                var bodyType = $(".listing_category_body-style")
+                  .children()
+                  .eq(1)
+                  .text()
+                  .trim();
+
+                var transmission = $(".listing_category_transmission")
+                  .children()
+                  .eq(1)
+                  .text()
+                  .trim();
+
+                var parish = $(".listing_category_location")
+                  .children()
+                  .eq(1)
+                  .text()
+                  .trim();
+
+                var trim = $(".listing_category_engine")
+                  .children()
+                  .eq(1)
+                  .text()
+                  .trim();
+
+                var driverSide = $(".listing_category_drive")
+                  .children()
+                  .eq(1)
+                  .text()
+                  .trim();
+
+                var mileage = $(".listing_category_mileage")
+                  .children()
+                  .eq(1)
+                  .text()
+                  .trim();
+
+                var imgs = [];
+
+                $("ul.slides > li > img").each(function(i) {
+                  imgs.push(
+                    $(this)
+                      .attr("src")
+                      .trim()
+                  );
+                });
+
+                // =======
+                // Build Results object
+                result.user = "KMS";
+                result.srcURL = srcURL;
+                result.postTitle = postTitle;
+                result.price = price;
+                result.year = yearCheck(year);
+                result.make = make;
+                result.model = model;
+                result.parish = parishCheck(parish);
+                result.description = description;
+                result.posted = false;
+                result.bodyType = bodyType;
+                result.transmission = transmission;
+                result.trim = trim;
+                result.driverSide = driverSide;
+                result.mileage = mileage;
+                result.imgs = imgs;
+                result.contactNumber = "18764331652";
+                nullCheck(result);
+              }); // end of single ad scraper
+            } // end of else statement for DB check
+          });
         } else {
-          // console.log("Found one" + srcURL);
-           
-  axios.get(srcURL).then(function(response){
-    var $ = cheerio.load(response.data);
-  
-    var workingTitle = $('h2[itemprop="name"]').text().trim().split(" ")
-
-    var year = workingTitle[0]
-
-    var make = workingTitle[1]
-
-    var model = workingTitle.slice(2).join(" ")
-
-    var workingPrice = $('span[itemprop="price"]').text()
-
-    workingTitle.push(workingPrice)
-    
-    var postTitle = workingTitle.join(" ")
-    
-    var price = workingPrice.replace(/[^0-9.-]+/g, "")
-    .trim(); // Clean price
-
-    var description = $('#vehicle').text()
-
-    var bodyType = $('.listing_category_body-style').children().eq(1).text().trim()
-
-    var transmission = $('.listing_category_transmission').children().eq(1).text().trim()
-
-    var parish = $('.listing_category_location').children().eq(1).text().trim()
-
-    var trim = $('.listing_category_engine').children().eq(1).text().trim()
-
-    var driverSide = $('.listing_category_drive').children().eq(1).text().trim()
-    
-    var mileage = $('.listing_category_mileage').children().eq(1).text().trim()
-    
-    var imgs = []
-
-
-    $('ul.slides > li > img').each(function(i){
-         imgs.push($(this).attr("src").trim())
+          console.log("it is not a listing");
+        } // end of else statement for listing check
+      });
     })
-
-    // =======
-    // Build Results object
-    result.user = "KMS";
-              result.srcURL = srcURL;
-              result.postTitle = postTitle;
-              result.price = price;
-              result.year = yearCheck(year);
-              result.make = make;
-              result.model = model;
-              result.parish = parishCheck(parish);
-              result.description = description;
-              result.posted = false;
-              result.bodyType = bodyType;
-              result.transmission = transmission;
-              result.trim = trim;
-              result.driverSide = driverSide;
-              result.mileage = mileage;
-              result.imgs = imgs;
-              result.contactNumber = "18764331652";
-    nullCheck(result)
-    
-  }) // end of single ad scraper
-        } //end of else
-      }) // end of db check
-    }) // end of crawler
-   
- }).catch(err => console.log(err))
-
+    .catch(err => console.log(err)); // end of crawler
 } // end of scraper KMS function
 
 // ==========================
@@ -794,7 +828,7 @@ function nullCheck(x) {
     res.posted = false;
   } else if (parseInt(res.price) < 100000 || res.price > 30000000) {
     res.posted = false;
-    console.log(res.user + ": price out of range: $" + res.price );
+    console.log(res.user + ": price out of range: $" + res.price);
   }
 
   if (res.make === undefined || res.make === null) {
@@ -844,13 +878,11 @@ function nullCheck(x) {
     res.transmission = "Automatic";
   }
 
-
-  if (res.contactNumber !== undefined && res.contactNumber.startsWith("1876")){
+  if (res.contactNumber !== undefined && res.contactNumber.startsWith("1876")) {
     // nothing
   } else {
     console.log(res.user + ": bad contact" + res.contactNumber);
-    res.posted = false
- 
+    res.posted = false;
   }
 
   if (res.posted === false) {
@@ -905,13 +937,9 @@ function parishCheck(location) {
 function makeCheck(make) {
   if (make.startsWith("Merc") || make.startsWith("Benz")) {
     return "Mercedes-Benz";
-  } 
-  
-  else if (make.startsWith("Land")) {
+  } else if (make.startsWith("Land")) {
     return "Land Rover";
-  } 
-
-  else if (make.startsWith("Mini")) {
+  } else if (make.startsWith("Mini")) {
     return "Mini Cooper ";
   } else return make;
 }
@@ -936,7 +964,7 @@ const job = new CronJob(
     pageScraper("https://www.jacars.net/vehicles/"); // Start jaCArs Ads
     retNum(); // ContactCleaner
     scaperJCO("https://jamaicaclassifiedonline.com/auto/cars/1");
-    scraperKMS("https://khaleelmotorsports.com/inventory/?listing_order=exterior-color&listing_orderby=DESC&paged=3")
+    scraperKMS("https://khaleelmotorsports.com/?s=");
     console.log("Cron Run, Next Run:");
     console.log(this.nextDates());
   },
