@@ -840,7 +840,7 @@ function nullCheck(x) {
       res.posted = true; // matches
     } else {
       res.posted = false; // no match
-      console.log("no match - " + res.make);
+      console.log("no make matched - " + res.make);
     }
   }
 
@@ -880,6 +880,8 @@ function nullCheck(x) {
 
   if (res.contactNumber !== undefined && res.contactNumber.startsWith("1876")) {
     // nothing
+  } else if (res.user == "jacars") {
+    // still do nothing
   } else {
     console.log(res.user + ": bad contact" + res.contactNumber);
     res.posted = false;
