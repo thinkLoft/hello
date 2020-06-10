@@ -33,16 +33,6 @@ var carDB = [];
 // ==========================
 // ======== Routes ==========
 // ==========================
-// // Route for getting all Articles from the db
-router.get("/crawler", async function(req, res) {
-  var ret = checker();
-  res.send(ret);
-});
-
-router.get("/cron", function(req, res) {
-  job.start();
-  res.send("Cron Started");
-});
 
 router.get("/latest", function(req, res) {
   // Build query to get the lastest listings sorted by date
@@ -276,10 +266,9 @@ function scraper(link) {
         .replace(".", ". ");
     }
 
-    var contact = $(".contact_details")
-      .text()
-      .replace(/[^0-9]+/g, "")
-      .substring(0, 11);
+    var contact = $(".contact_details > a")
+      .attr("href")
+      .replace(/[^0-9]+/g, "");
 
     // Get Features for description
     var features = [];
@@ -328,10 +317,8 @@ function scraper(link) {
     result.posted = false;
 
     nullCheck(result);
-    // create new row in database
-    // db.Post.create(result).catch(err => console.log(err));
 
-    // console.log("Auto Ad Scraped: " + result.srcURL);
+    console.log("Auto Ad Scraped: " + result.srcURL);
   });
 
   return "hello from pageCrawler";
