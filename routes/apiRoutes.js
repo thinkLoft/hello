@@ -356,7 +356,7 @@ function pageScraper(element) {
         // Check if ad Exists in DB
         db.Post.find({ srcURL: srcURL }, function(err, docs) {
           if (docs.length) {
-            // console.log("no ad found");
+            console.log("no ad found");
           } else {
             // console.log("JA Car ad Found: " + srcURL);
 
@@ -708,9 +708,9 @@ function scraperKMS(link) {
           // Check if ad Exists in DB
           db.Post.find({ srcURL: srcURL }, function(err, docs) {
             if (docs.length) {
-              console.log("EXISTS");
+              // console.log("EXISTS");
             } else {
-              console.log("nope it new");
+              // console.log("nope it new");
 
               var result = {};
               axios.get(srcURL).then(function(response) {
@@ -807,7 +807,7 @@ function scraperKMS(link) {
             } // end of else statement for DB check
           });
         } else {
-          console.log("it is not a listing");
+          // console.log("it is not a listing");
         } // end of else statement for listing check
       });
     })
@@ -960,11 +960,11 @@ function driverSideCheck(driverSide) {}
 const job = new CronJob(
   "0 */15 * * * *",
   function() {
-    checker(); // Start Auto Ads
-    pageScraper("https://www.jacars.net/vehicles/"); // Start jaCArs Ads
-    retNum(); // ContactCleaner
-    scaperJCO("https://jamaicaclassifiedonline.com/auto/cars/1");
-    scraperKMS("https://khaleelmotorsports.com/?s=");
+    // checker(); // Start Auto Ads
+    pageScraper("https://www.jacars.net/search/"); // Start jaCArs Ads
+    retNum(); // ContactCleanert
+    // scaperJCO("https://jamaicaclassifiedonline.com/auto/cars/1");
+    // scraperKMS("https://khaleelmotorsports.com/?s=");
     console.log("Cron Run, Next Run:");
     console.log(this.nextDates());
   },
