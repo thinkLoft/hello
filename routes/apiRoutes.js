@@ -356,7 +356,7 @@ function pageScraper(element) {
         // Check if ad Exists in DB
         db.Post.find({ srcURL: srcURL }, function(err, docs) {
           if (docs.length) {
-            console.log("no ad found");
+            // console.log("no ad found");
           } else {
             // console.log("JA Car ad Found: " + srcURL);
 
@@ -785,7 +785,7 @@ function scraperKMS(link) {
 
                 // =======
                 // Build Results object
-                result.user = "KMS";
+                result.user = "kms";
                 result.srcURL = srcURL;
                 result.postTitle = postTitle;
                 result.price = price;
@@ -960,11 +960,11 @@ function driverSideCheck(driverSide) {}
 const job = new CronJob(
   "0 */15 * * * *",
   function() {
-    // checker(); // Start Auto Ads
+    checker(); // Start Auto Ads
     pageScraper("https://www.jacars.net/search/"); // Start jaCArs Ads
     retNum(); // ContactCleanert
-    // scaperJCO("https://jamaicaclassifiedonline.com/auto/cars/1");
-    // scraperKMS("https://khaleelmotorsports.com/?s=");
+    scaperJCO("https://jamaicaclassifiedonline.com/auto/cars/1");
+    scraperKMS("https://khaleelmotorsports.com/?s=");
     console.log("Cron Run, Next Run:");
     console.log(this.nextDates());
   },
