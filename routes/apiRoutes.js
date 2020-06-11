@@ -325,7 +325,7 @@ function scraper(link) {
   // end of crawler
 }
 
-// C - SCRAPER: Jamiaca Cars
+// C - SCRAPER: Ja Cars
 // =====================================
 function pageScraper(element) {
   axios
