@@ -362,6 +362,12 @@ function pageScraper(element) {
 
               var year = tempTitle[tempTitle.length - 1];
 
+              var priceTemp = $("meta[itemprop='price']")
+              .attr("content")
+              .replace(/[^0-9.-]+/g, "");
+
+            var price = Math.round(priceTemp);
+              
               var postTitle =
                 year +
                 " " +
@@ -373,10 +379,6 @@ function pageScraper(element) {
                   .text()
                   .trim();
 
-              var price = $(".announcement-price__cost")
-                .text()
-                .replace(/[^0-9.-]+/g, "")
-                .trim(); // Clean price
 
               if (price < 10000 && price > 100) {
                 price = price * 1000;
