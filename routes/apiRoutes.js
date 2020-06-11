@@ -363,22 +363,12 @@ function pageScraper(element) {
               var year = tempTitle[tempTitle.length - 1];
 
               var priceTemp = $("meta[itemprop='price']")
-              .attr("content")
-              .replace(/[^0-9.-]+/g, "");
+                .attr("content")
+                .replace(/[^0-9.-]+/g, "");
 
-            var price = Math.round(priceTemp);
-              
-              var postTitle =
-                year +
-                " " +
-                make +
-                " " +
-                model +
-                " - " +
-                $(".announcement-price__cost")
-                  .text()
-                  .trim();
+              var price = Math.round(priceTemp);
 
+              var postTitle = year + " " + make + " " + model + " - " + price;
 
               if (price < 10000 && price > 100) {
                 price = price * 1000;
@@ -456,7 +446,6 @@ function pageScraper(element) {
               result.make = make;
               result.model = model;
               result.parish = parish;
-
               result.description = description;
               result.posted = false;
               result.bodyType = attr.bodyType;
@@ -468,6 +457,7 @@ function pageScraper(element) {
               result.imgs = imgs;
 
               nullCheck(result);
+              // console.log(result.price, result.srcURL);
             }); // end of axios statement
           } // end of else
         }); // end db check
