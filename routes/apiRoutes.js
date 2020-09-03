@@ -15,7 +15,7 @@ const path = require("path");
 
 // Require all models
 const db = require("../models");
-const fields = ["srcURL", "year", "make", "model", "price", "parish"];
+const fields = ["url", "year", "make", "model", "price", "parish"];
 var carDB = [];
 
 // ==========================
@@ -300,15 +300,13 @@ function pageScraper(element) {
 
               var model = tempTitle[1];
 
-              var year = tempTitle[tempTitle.length - 1];
-
               var priceTemp = $("meta[itemprop='price']")
                 .attr("content")
                 .replace(/[^0-9.-]+/g, "");
 
               var price = Math.round(priceTemp);
 
-              var postTitle = year + " " + make + " " + model + " - " + price;
+              // var postTitle = year + " " + make + " " + model + " - " + price;
 
               if (price < 10000 && price > 100) {
                 price = price * 1000;
@@ -367,25 +365,20 @@ function pageScraper(element) {
               // ================
               // Update Results object
               result.user = "jacars";
-              result.srcURL = srcURL;
-              result.postTitle = postTitle;
+              result.url = srcURL;
               result.price = price;
-              result.year = yearCheck(attr.year);
+              result.year = attr.year;
               result.make = make;
               result.model = model;
               result.parish = location;
               result.description = description;
-              result.posted = false;
               result.bodyType = attr.bodyType;
               result.transmission = attr.transmission;
-              result.trim = attr.engineSize;
               result.driverSide = attr.driverSide;
               result.mileage = attr.mileage;
-              result.fuelType = attr.fuelType;
               result.imgs = imgs;
 
               nullCheck(result);
-              // console.log(result.price, result.srcURL);
             }); // end of axios statement
           } // end of else
         }); // end db check
@@ -408,6 +401,9 @@ function retNum() {
 
   // verify it has a contact number
   query.where("user").eq("jacars");
+
+  // only pull ones that pass nullcheck
+  query.where("posted").eq(true)
 
   // Limit to 500
   query.limit(3);
@@ -435,7 +431,7 @@ function scaperJCO(link) {
         var srcURL = $(this).attr("href");
 
         // Check if ad Exists in DB
-        db.Post.find({ srcURL: srcURL }, function (err, docs) {
+        db.Cars.find({ url: srcURL }, function (err, docs) {
           if (docs.length) {
             // console.log("no ad found");
           } else {
@@ -456,7 +452,7 @@ function scaperJCO(link) {
 
                 switch (subtitle) {
                   case "Year":
-                    attr.year = yearCheck(val);
+                    attr.year = val;
                     break;
                   case "Make":
                     attr.make = val;
@@ -466,9 +462,6 @@ function scaperJCO(link) {
                     break;
                   case "Body Type":
                     attr.bodyType = val;
-                    break;
-                  case "Fuel Type":
-                    attr.fuelType = val;
                     break;
                   case "Transmission":
                     attr.transmission = val;
@@ -551,23 +544,13 @@ function scaperJCO(link) {
                 });
               } // end if year empty statement
 
-              // Build title
-              attr.postTitle = $("#title")
-                .text()
-                .replace(/For Sale: /g, "")
-                .trim();
-
               // Build Results Object
               attr.user = "jamaicaonlineclassifieds";
-              attr.srcURL = srcURL;
+              attr.url = srcURL;
               attr.imgs = imgs;
-              attr.date = moment().format("YYYYMMDDhhmmss");
+              // attr.date = moment().format("YYYYMMDDhhmmss");
 
               nullCheck(attr);
-              // // Add to database
-              // db.Post.create(attr).catch(err =>
-              //   console.log(err + "\nerror in create statement")
-              // ); //end of db create
             }); // end second Axios statement
           }
         }); // end db find statement
@@ -706,7 +689,7 @@ function nullCheck(x) {
   res.date = moment().format("YYYYMMDD");
 
   if (res.price === undefined || res.price === null) {
-    res.comments += res.user + "No price. ";
+    res.comments += "No price. ";
     res.price = 0;
   } else if (parseInt(res.price) < 100000 || res.price > 30000000) {
     // res.posted = false;
@@ -722,12 +705,12 @@ function nullCheck(x) {
   }
 
   if (res.model === undefined || res.model === null) {
-    res.comments += res.user + ": no model. ";
+    res.comments += "No model. ";
     res.posted = false;
   }
 
   if (res.year === undefined || res.year === null) {
-    res.comments += res.user + ": no year. ";
+    res.comments += "No year. ";
     res.posted = false;
   } else {
     res.year = yearCheck(res.year);
@@ -760,7 +743,10 @@ function nullCheck(x) {
     res.posted = false;
   }
 
-  if (
+  if (res.driverSide === undefined || res.driverSide === null) {
+    res.comments += "No driverSide";
+    res.posted = false;
+  } else if (
     res.driverSide.toLowerCase().includes("left") ||
     res.driverSide.includes("LHD")
   ) {
@@ -770,9 +756,14 @@ function nullCheck(x) {
     res.driverSide.includes("RHD")
   ) {
     res.driverSide = "Right Hand Drive";
+  } else {
+    res.comments += res.driverSide + ": bad DriverSide";
   }
 
-  if (res.transmission.toLowerCase().includes("manual")) {
+  if (res.transmission === undefined || res.transmission === null) {
+    res.comments += "No Transmission";
+    res.posted = false;
+  } else if (res.transmission.toLowerCase().includes("manual")) {
     res.transmission = "Manual";
   } else if (
     res.transmission == "Tiptronic" ||
@@ -781,6 +772,7 @@ function nullCheck(x) {
     res.transmission = "Automatic";
   } else {
     res.comments = res.transmission + ": bad transmission. ";
+    res.posted = false;
   }
 
   if (res.contactNumber !== undefined && res.contactNumber.startsWith("1876")) {
@@ -793,8 +785,7 @@ function nullCheck(x) {
   }
 
   if (res.posted === false) {
-    res.comments +=
-      res.user + " Verdict: \n - " + res.posted + " (" + res.srcURL + "). ";
+    res.comments += " Verdict: \n - " + res.posted + ". ";
   }
 
   updatedb(res); // update Database Call
@@ -802,7 +793,7 @@ function nullCheck(x) {
 
 function updatedb(result) {
   // Add to database
-  db.Post.create(result).catch((err) =>
+  db.Cars.create(result).catch((err) =>
     console.log(err + "\nerror in create statement")
   ); //end of db create
 }
@@ -844,8 +835,8 @@ function driverSideCheck(driverSide) {}
 const job = new CronJob(
   "0 */15 * * * *",
   function () {
-    checker(); // Start Auto Ads
-    // pageScraper("https://www.jacars.net/search/"); // Start jaCArs Ads
+    // checker(); // Start Auto Ads
+    pageScraper("https://www.jacars.net/search/"); // Start jaCArs Ads
     // retNum(); // ContactCleanert
     // scaperJCO("https://jamaicaclassifiedonline.com/auto/cars/1");
     // scraperKMS("https://khaleelmotorsports.com/?s=");
