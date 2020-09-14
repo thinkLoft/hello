@@ -6,6 +6,9 @@ const router = require("express").Router();
 const axios = require("axios");
 const cheerio = require("cheerio");
 const CronJob = require("cron").CronJob;
+const puppeteer = require("puppeteer");
+const { distance, closest } = require("fastest-levenshtein");
+const currentYear = new Date().getFullYear();
 
 // CSV Tools
 const fs = require("fs");
@@ -16,25 +19,103 @@ const path = require("path");
 // Require all models
 const db = require("../models");
 const fields = [
-  "srcURL",
+  "url",
+  "posted",
+  "user",
   "year",
   "make",
   "model",
-  "trim",
   "price",
   "parish",
-  "user",
-  "date",
+  "bodyType",
+  "transmission",
+  "driverSide",
   "contactNumber",
-  "posted"
+  "comments",
 ];
 var carDB = [];
+const bodyTypes = [
+  "SEDAN",
+  "COUPE",
+  "VAN",
+  "CONVERTIBLE",
+  "PICKUP",
+  "TRUCK",
+  "BUS",
+  "SUV",
+  "HATCHBACK",
+  "WAGON",
+  "MINIVAN",
+  "MOTORCYCLE",
+  "WRECKER",
+];
 
 // ==========================
 // ======== Routes ==========
 // ==========================
 
-router.get("/latest", function(req, res) {
+router.get("/carsforsale", function (req, res) {
+  // Build query to get the lastest listings sorted by date
+  var query = db.Cars.find({}).sort({ _id: -1 });
+  var oldLimt = currentYear - 10;
+
+  query.where("posted").equals(true);
+
+  query.where("price").gte(1000000);
+
+  query.where("year").gte(oldLimt);
+  // verify it has at least one image
+  query.where("imgs").gt([]);
+  // Limit to 200
+
+  query.limit(200);
+
+  query.exec(function (err, docs) {
+    res.send(docs);
+  });
+});
+
+router.get("/undermil", function (req, res) {
+  // Build query to get the lastest listings sorted by date
+  var query = db.Cars.find({}).sort({ _id: -1 });
+  var oldLimt = currentYear - 10;
+
+  query.where("posted").equals(true);
+
+  query.where("price").lt(1000000);
+
+  query.where("year").gte(oldLimt);
+  // verify it has at least one image
+  query.where("imgs").gt([]);
+  // Limit to 200
+
+  query.limit(200);
+
+  query.exec(function (err, docs) {
+    res.send(docs);
+  });
+});
+
+router.get("/latest", function (req, res) {
+  // Build query to get the lastest listings sorted by date
+  var query = db.Cars.find({}).sort({ _id: -1 });
+  var oldLimt = currentYear - 10;
+
+  query.where("posted").equals(true);
+
+  query.where("year").lt(oldLimt);
+  // verify it has at least one image
+  query.where("imgs").gt([]);
+  // Limit to 500
+
+  query.limit(300);
+
+  query.exec(function (err, docs) {
+    res.send(docs);
+  });
+});
+
+router.get("/2019", function (req, res) {
   // Build query to get the lastest listings sorted by date
   var query = db.Post.find({}).sort({ _id: -1 });
 
@@ -51,22 +132,31 @@ router.get("/latest", function(req, res) {
 
   query.limit(1000);
 
-  query.exec(function(err, docs) {
+  query.exec(function (err, docs) {
     res.send(docs);
   });
 });
 
 // Return count of all listings
-router.get("/count", function(req, res) {
-  db.Post.countDocuments(function(err, docs) {
+router.get("/2019count", function (req, res) {
+  db.Post.countDocuments(function (err, docs) {
     response = "";
     response += docs;
     res.send(response);
   });
 });
 
-router.get("/csv", function(req, res) {
-  db.Post.find({}, function(err, docs) {
+// Return count of all listings
+router.get("/count", function (req, res) {
+  db.Cars.countDocuments(function (err, docs) {
+    response = "";
+    response += docs;
+    res.send(response);
+  });
+});
+
+router.get("/csv", function (req, res) {
+  db.Cars.find({}, function (err, docs) {
     if (err) {
       return res.status(500).json({ err });
     } else {
@@ -78,18 +168,18 @@ router.get("/csv", function(req, res) {
       }
       const dateTime = moment().format("YYYYMMDDhhmmss");
       const filePath = path.join(__dirname, "csv-" + dateTime + ".csv");
-      fs.writeFile(filePath, csv, function(err) {
+      fs.writeFile(filePath, csv, function (err) {
         if (err) {
           return res.json(err).status(500);
         } else {
-          setTimeout(function() {
+          setTimeout(function () {
             fs.unlinkSync(filePath); // delete this file after 30 seconds
           }, 30000);
           return res.download(filePath);
         }
       });
     }
-  }).limit(5000);
+  }).limit(15000);
 });
 
 module.exports = router;
@@ -98,16 +188,28 @@ module.exports = router;
 // ========== APP ===========
 // ==========================
 
+// CAR QUERY VALIDATOR
+axios
+  .get("https://vpic.nhtsa.dot.gov/api/vehicles/getallmakes?format=json")
+  .then(function (results) {
+    data = results.data.Results;
+    data.forEach(function (val, i) {
+      carDB.push(val.Make_Name);
+    });
+  })
+  .catch(function (error) {
+    console.log("Error " + error.message);
+  });
+
 // ===========
 // Puppeteer
 // ===========
-const puppeteer = require("puppeteer");
 
 async function puppetMaster(res) {
   if (res.length > 0) {
     const browser = await puppeteer.launch({
       headless: true,
-      args: ["--no-sandbox", "--disable-setuid-sandbox"]
+      args: ["--no-sandbox", "--disable-setuid-sandbox"],
     });
     const page = await browser.newPage();
 
@@ -115,19 +217,10 @@ async function puppetMaster(res) {
 
     for (let newItem of res) {
       count++;
-      await page.goto(newItem.srcURL, { waitUntil: "networkidle2" });
+      await page.goto(newItem.url, { waitUntil: "networkidle2" });
       await page.evaluate(() => {
         $(".phone-author__title").click();
       });
-      //  ---->8/24: turned off prompt on  site
-      // var firstRun = true;
-
-      // if (firstRun) {
-      //   await page.evaluate(() => {
-      //     $(".js-agree-terms-dialog").click();
-      //   });
-      //   firstRun = false;
-      // }
 
       await page.waitFor(800);
       var html = await page.content();
@@ -141,53 +234,52 @@ async function puppetMaster(res) {
           .replace(/[^0-9]+/g, "");
 
         results.contactNumber = contactCheck(results.contactNumber);
-
-        await console.log(
-          "Contact Number Found: #" + count + " - " + results.contactNumber
-        );
       }
 
       results.contactNumber;
 
       // find and update imgs
-      await db.Post.findOneAndUpdate(
-        { srcURL: newItem.srcURL },
+      await db.Cars.findOneAndUpdate(
+        { url: newItem.url },
         results
-      ).catch(err =>
-        console.log("error in the contacts db findAndUpdate function")
+      ).catch((err) =>
+        console.log("error in the contacts db findAndUpdate function." + err)
       ); // end of db findOneandUdpdate
     } // end of for loop statement
 
     await browser.close();
-    console.log("browser closed\n======");
   } // End if Statement
 }
 
 // A - CRAWLER: AUTO ADS CHECKER
 // =====================================
 function checker() {
-  axios.get("https://www.autoadsja.com/rss.asp").then(function(response) {
-    // Then, we load that into cheerio and save it to $ for a shorthand selector
-    var $ = cheerio.load(response.data, { xmlMode: true });
+  axios
+    .get("https://www.autoadsja.com/rss.asp")
+    .then(function (response) {
+      // Then, we load that into cheerio and save it to $ for a shorthand selector
+      var $ = cheerio.load(response.data, { xmlMode: true });
 
-    $("item").each(function(i, element) {
-      var srcURL = $(this)
-        .children("link")
-        .text();
+      $("item").each(function (i, element) {
+        var srcURL = $(this).children("link").text();
 
-      // Check
-      db.Post.find({ srcURL: srcURL }, function(err, docs) {
-        if (docs.length) {
-          // no ad found
-        } else {
-          // console.log("Ad Found: " + srcURL);
-          scraper(srcURL);
-        }
+        // Check
+        db.Cars.find({ url: srcURL }, function (err, docs) {
+          if (docs.length) {
+            // no ad found
+          } else {
+            scraper(srcURL);
+          }
+        })
+          .limit(1000)
+          .catch((err) => console.log(`Failed to find documents: ${err}`));
+        // end post function
       });
-      // end post function
+      // end each function
+    })
+    .catch(function (error) {
+      console.log("Error " + error.message);
     });
-    // end each function
-  });
   // end of axios function
   return "hello from checker function";
 }
@@ -195,131 +287,105 @@ function checker() {
 // B - SCRAPER: AUTOADS
 // =====================================
 function scraper(link) {
-  axios.get(link).then(function(response) {
-    // Then, we load that into cheerio and save it to $ for a shorthand selector
-    var $ = cheerio.load(response.data);
+  axios
+    .get(link)
+    .then(function (response) {
+      // Then, we load that into cheerio and save it to $ for a shorthand selector
+      var $ = cheerio.load(response.data);
 
-    // Save an empty result object
-    var result = {};
+      // Save an empty result object
+      var result = {};
 
-    // crawled variables
-    var title = $(".price-tag > h1").text();
-    var price = $(".price-tag > h2")
-      .text()
-      .replace(/[^0-9.-]+/g, "");
-    // Add Formatted price to Title
-    title += " - $" + price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+      // crawled variables
+      var title = $(".price-tag > h1").text();
+      var price = $(".price-tag > h2")
+        .text()
+        .replace(/[^0-9.-]+/g, "");
+      var ymm = title.split(" "); // break Title into array of text
+      var year = ymm[0];
+      var make = ymm[1].replace(/\-.*/g, "").trim();
+      var model = ymm[2].replace(/\-.*/g, "").trim();
+      if (
+        $(".per-detail > ul > li") !== undefined &&
+        $(".per-detail > ul > li")[0] !== undefined
+      ) {
+        // Check array undefined to catch err from array
+        var location = $(".per-detail > ul > li")[0]
+          .children[0].data.replace("Location: ", "")
+          .replace(/\s+/g, "")
+          .replace(".", ". ");
 
-    var ymm = title.split(" "); // break Title into array of text
-    var year = ymm[0];
-    var make = ymm[1].replace(/\-.*/g, "").trim();
-    var model = ymm[2].replace(/\-.*/g, "").trim();
-    var modelIndex = title.indexOf(model) + model.length + 1;
-    var trim = title
-      .substring(modelIndex)
-      .replace(/\-.*/g, "")
-      .trim();
+        var bodyType = $(".per-detail > ul > li")[1]
+          .children[0].data.replace("Body Type: ", "")
+          .replace(/\s+/g, "")
+          .replace(".", ". ");
 
-    if (
-      $(".per-detail > ul > li") !== undefined &&
-      $(".per-detail > ul > li")[0] !== undefined
-    ) {
-      // Check array undefined to catch err from array
-      var location = $(".per-detail > ul > li")[0]
-        .children[0].data.replace("Location: ", "")
-        .replace(/\s+/g, "")
-        .replace(".", ". ");
+        var driverSide = $(".per-detail > ul > li")[2]
+          .children[0].data.replace("Driver Side: ", "")
+          .replace(/\s+/g, "")
+          .replace(".", ". ");
 
-      var bodyType = $(".per-detail > ul > li")[1]
-        .children[0].data.replace("Body Type: ", "")
-        .replace(/\s+/g, "")
-        .replace(".", ". ");
+        var transmission = $(".per-detail > ul > li")[4]
+          .children[0].data.replace("Transmission: ", "")
+          .replace(/\s+/g, "")
+          .replace(".", ". ");
 
-      var driverSide = $(".per-detail > ul > li")[2]
-        .children[0].data.replace("Driver Side: ", "")
-        .replace(/\s+/g, "")
-        .replace(".", ". ");
+        var mileage = $(".per-detail > ul > li")[7]
+          .children[0].data.replace("Mileage: ", "")
+          .replace(/\s+/g, "")
+          .replace(".", ". ");
+      }
 
-      var driveType = $(".per-detail > ul > li")[3]
-        .children[0].data.replace("Drive Type: ", "")
-        .replace(/\s+/g, "")
-        .replace(".", ". ");
+      var contact = $(".contact_details > a")
+        .attr("href")
+        .replace(/[^0-9]+/g, "");
 
-      var transmission = $(".per-detail > ul > li")[4]
-        .children[0].data.replace("Transmission: ", "")
-        .replace(/\s+/g, "")
-        .replace(".", ". ");
+      // Get Features for description
+      var features = [];
 
-      var fuelType = $(".per-detail > ul > li")[5]
-        .children[0].data.replace("Fuel type: ", "")
-        .replace(/\s+/g, "")
-        .replace(".", ". ");
+      features.push($(".vehicle-description").text());
 
-      var engineSize = $(".per-detail > ul > li")[6]
-        .children[0].data.replace("CC rating: ", "")
-        .replace(/\s+/g, "")
-        .replace(".", ". ");
+      $(".per-detail > ul > li").each(function (i) {
+        features.push($(this).text());
+      });
 
-      var mileage = $(".per-detail > ul > li")[7]
-        .children[0].data.replace("Mileage: ", "")
-        .replace(/\s+/g, "")
-        .replace(".", ". ");
-    }
+      features.push($(".contact_details").text());
 
-    var contact = $(".contact_details > a")
-      .attr("href")
-      .replace(/[^0-9]+/g, "");
+      var description = "";
+      features.forEach(function (element) {
+        description += element.toString();
+        description += "\n";
+      });
 
-    // Get Features for description
-    var features = [];
+      // Get Images
+      var imgs = [];
+      $(".product-images > .prod-box > a").each(function (i) {
+        imgs.push($(this).attr("href"));
+      });
 
-    features.push($(".vehicle-description").text());
+      // Update Results object
+      result.user = "autoadsja";
+      result.url = response.config.url;
+      result.price = price;
+      result.year = year;
+      result.make = make;
+      result.model = model;
+      result.parish = location;
+      result.contactNumber = contact;
+      result.description = description;
+      result.imgs = imgs;
+      result.price = price;
+      result.bodyType = bodyType;
+      result.driverSide = driverSide;
+      result.transmission = transmission;
+      result.mileage = mileage;
+      result.posted = false;
 
-    $(".per-detail > ul > li").each(function(i) {
-      features.push($(this).text());
-    });
-
-    features.push($(".contact_details").text());
-
-    var description = "";
-    features.forEach(function(element) {
-      description += element.toString();
-      description += "\n";
-    });
-
-    // Get Images
-    var imgs = [];
-    $(".product-images > .prod-box > a").each(function(i) {
-      imgs.push($(this).attr("href"));
-    });
-
-    // Update Results object
-    result.user = "autoadsja";
-    result.srcURL = response.config.url;
-    result.postTitle = title;
-    result.price = price;
-    result.year = year;
-    result.make = make;
-    result.model = model;
-    result.parish = location;
-    result.contactNumber = contact;
-    result.description = description;
-    result.imgs = imgs;
-    result.price = price;
-    result.bodyType = bodyType;
-    result.driverSide = driverSide;
-    result.driveType = driveType;
-    result.transmission = transmission;
-    result.fuelType = fuelType;
-    result.engineSize = engineSize;
-    result.mileage = mileage;
-    result.trim = trim;
-    result.posted = false;
-
-    nullCheck(result);
-
-    console.log("Auto Ad Scraped: " + result.srcURL);
-  });
+      nullCheck(result);
+    })
+    .catch(function (error) {
+      console.log("Error from autoads axios" + error.message);
+    }); // end of axios statement
 
   return "hello from pageCrawler";
   // end of crawler
@@ -330,29 +396,27 @@ function scraper(link) {
 function pageScraper(element) {
   axios
     .get(element)
-    .then(function(response) {
+    .then(function (response) {
       var $ = cheerio.load(response.data);
 
       // page Crawler
-      $(".announcement-block__title").each(function(i, element) {
+      $(".announcement-block__title").each(function (i, element) {
         // grab sc URL
         var srcURL = "https://www.jacars.net" + $(this).attr("href");
 
         var result = {}; // Save an empty result object
 
         // Check if ad Exists in DB
-        db.Post.find({ srcURL: srcURL }, function(err, docs) {
+        db.Cars.find({ url: srcURL }, function (err, docs) {
           if (docs.length) {
             // console.log("no ad found");
           } else {
             // console.log("JA Car ad Found: " + srcURL);
 
-            axios.get(srcURL).then(function(response) {
+            axios.get(srcURL).then(function (response) {
               var $ = cheerio.load(response.data);
 
-              var title = $("#ad-title")
-                .text()
-                .trim();
+              var title = $("#ad-title").text().trim();
 
               var tempTitle = title.split(" ");
 
@@ -360,33 +424,25 @@ function pageScraper(element) {
 
               var model = tempTitle[1];
 
-              var year = tempTitle[tempTitle.length - 1];
-
               var priceTemp = $("meta[itemprop='price']")
                 .attr("content")
                 .replace(/[^0-9.-]+/g, "");
 
               var price = Math.round(priceTemp);
 
-              var postTitle = year + " " + make + " " + model + " - " + price;
+              // var postTitle = year + " " + make + " " + model + " - " + price;
 
               if (price < 10000 && price > 100) {
                 price = price * 1000;
               }
 
-              var description = $(".announcement-description")
-                .text()
-                .trim();
+              var description = $(".announcement-description").text().trim();
 
               var attr = {};
 
-              $(".chars-column > li").each(function(i, element) {
-                subtitle = $(this)
-                  .children("span")
-                  .text();
-                val = $(this)
-                  .children("a")
-                  .text();
+              $(".chars-column > li").each(function (i, element) {
+                subtitle = $(this).children("span").text();
+                val = $(this).children("a").text();
 
                 switch (subtitle) {
                   case "Year":
@@ -422,48 +478,37 @@ function pageScraper(element) {
               var imgs = [];
               $(".announcement-content-container")
                 .children("img")
-                .each(function(i) {
-                  imgs.push(
-                    $(this)
-                      .attr("src")
-                      .trim()
-                  );
+                .each(function (i) {
+                  imgs.push($(this).attr("src").trim());
                 });
 
               var location = $(".announcement__location")
                 .children("span")
                 .text();
 
-              var parish = parishCheck(location);
-
               // ================
               // Update Results object
               result.user = "jacars";
-              result.srcURL = srcURL;
-              result.postTitle = postTitle;
+              result.url = srcURL;
               result.price = price;
-              result.year = yearCheck(attr.year);
+              result.year = attr.year;
               result.make = make;
               result.model = model;
-              result.parish = parish;
+              result.parish = location;
               result.description = description;
-              result.posted = false;
               result.bodyType = attr.bodyType;
               result.transmission = attr.transmission;
-              result.trim = attr.engineSize;
               result.driverSide = attr.driverSide;
               result.mileage = attr.mileage;
-              result.fuelType = attr.fuelType;
               result.imgs = imgs;
 
               nullCheck(result);
-              // console.log(result.price, result.srcURL);
             }); // end of axios statement
           } // end of else
-        }); // end db check
+        }).limit(1000); // end db check
       }); // end of crawler
     })
-    .catch(err => console.log(err));
+    .catch((err) => console.log("JAcars Axio Error" + err));
 
   return "hello from pageScraper";
   // end of crawler
@@ -473,7 +518,7 @@ function pageScraper(element) {
 // =====================================
 function retNum() {
   // Build query to get the lastest listings sorted by date
-  var query = db.Post.find({}).sort({ _id: -1 });
+  var query = db.Cars.find({}).sort({ _id: -1 });
 
   // verify if has a contact number
   query.where("contactNumber").eq(null);
@@ -481,10 +526,13 @@ function retNum() {
   // verify it has a contact number
   query.where("user").eq("jacars");
 
+  // only pull ones that pass nullcheck
+  query.where("posted").eq(true);
+
   // Limit to 500
   query.limit(3);
 
-  query.exec(async function(err, docs) {
+  query.exec(async function (err, docs) {
     puppetMaster(docs);
   });
 }
@@ -493,11 +541,11 @@ function retNum() {
 // =====================================
 
 function scaperJCO(link) {
-  axios.get(link).then(function(response) {
+  axios.get(link).then(function (response) {
     var $ = cheerio.load(response.data);
 
     // Search for each item
-    $(".jco-card > a").each(function(i) {
+    $(".jco-card > a").each(function (i) {
       // filter out external links
       if (
         $(this)
@@ -507,32 +555,28 @@ function scaperJCO(link) {
         var srcURL = $(this).attr("href");
 
         // Check if ad Exists in DB
-        db.Post.find({ srcURL: srcURL }, function(err, docs) {
+        db.Cars.find({ url: srcURL }, function (err, docs) {
           if (docs.length) {
             // console.log("no ad found");
           } else {
-            axios.get(srcURL).then(function(response) {
+            axios.get(srcURL).then(function (response) {
               var $ = cheerio.load(response.data);
 
               // Object to hold attributes
               var attr = {};
 
               // Check through Information Section
-              $("li.collection-item ").each(function() {
+              $("li.collection-item ").each(function () {
                 var subtitle = $(this)
                   .children("div")
                   .text()
                   .replace(/:\W*.*/g, "")
                   .trim();
-                var val = $(this)
-                  .children("div")
-                  .children("a")
-                  .text()
-                  .trim();
+                var val = $(this).children("div").children("a").text().trim();
 
                 switch (subtitle) {
                   case "Year":
-                    attr.year = yearCheck(val);
+                    attr.year = val;
                     break;
                   case "Make":
                     attr.make = val;
@@ -542,9 +586,6 @@ function scaperJCO(link) {
                     break;
                   case "Body Type":
                     attr.bodyType = val;
-                    break;
-                  case "Fuel Type":
-                    attr.fuelType = val;
                     break;
                   case "Transmission":
                     attr.transmission = val;
@@ -559,16 +600,11 @@ function scaperJCO(link) {
                 // filter empty posts
               } else {
                 // Target Information Area
-                $("div.col.s12.l3.m6.flow-text").each(function(i) {
+                $("div.col.s12.l3.m6.flow-text").each(function (i) {
                   // Get Number
                   if (
-                    $(this)
-                      .children("a")
-                      .attr("href") !== undefined &&
-                    $(this)
-                      .children("a")
-                      .attr("href")
-                      .startsWith("tel:")
+                    $(this).children("a").attr("href") !== undefined &&
+                    $(this).children("a").attr("href").startsWith("tel:")
                   ) {
                     attr.contactNumber = $(this)
                       .children("a")
@@ -605,66 +641,44 @@ function scaperJCO(link) {
                       .trim()
                       .startsWith("map")
                   ) {
-                    attr.parish = parishCheck(
-                      $(this)
-                        .last()
-                        .contents()
-                        .text()
-                        .replace(/(\W)*map/g, "")
-                        .trim()
-                    );
+                    attr.parish = $(this)
+                      .last()
+                      .contents()
+                      .text()
+                      .replace(/(\W)*map/g, "")
+                      .trim();
                   }
                   // end of get parish
                 }); // end of each title area function
 
                 // Get Description
-                attr.description = $("div.wysiwyg")
-                  .text()
-                  .trim();
+                attr.description = $("div.wysiwyg").text().trim();
 
                 // get Features area
-                $("span.card-title").each(function() {
-                  if (
-                    $(this)
-                      .text()
-                      .startsWith("FEATURES")
-                  ) {
-                    attr.description +=
-                      "\n\n" +
-                      $(this)
-                        .next()
-                        .text()
-                        .trim();
+                $("span.card-title").each(function () {
+                  if ($(this).text().startsWith("FEATURES")) {
+                    attr.description += "\n\n" + $(this).next().text().trim();
                   }
                 }); // end of features area
 
                 // Get Images
                 var imgs = [];
-                $("a.item-images").each(function() {
+                $("a.item-images").each(function () {
                   imgs.push($(this).attr("href"));
                 });
               } // end if year empty statement
 
-              // Build title
-              attr.postTitle = $("#title")
-                .text()
-                .replace(/For Sale: /g, "")
-                .trim();
-
               // Build Results Object
               attr.user = "jamaicaonlineclassifieds";
-              attr.srcURL = srcURL;
+              attr.url = srcURL;
               attr.imgs = imgs;
-              attr.date = moment().format("YYYYMMDDhhmmss");
 
               nullCheck(attr);
-              // // Add to database
-              // db.Post.create(attr).catch(err =>
-              //   console.log(err + "\nerror in create statement")
-              // ); //end of db create
             }); // end second Axios statement
           }
-        }); // end db find statement
+        })
+          .limit(1000)
+          .catch((err) => console.log(`Failed to find documents: ${err}`)); // end db find statement
       } // end filter for ex  ternal links
     }); // end search for each item
   }); // end axio function
@@ -677,22 +691,22 @@ function scraperKMS(link) {
   //crawler
   axios
     .get(link)
-    .then(function(response) {
+    .then(function (response) {
       var $ = cheerio.load(response.data);
 
-      $("div.blog-title > h2 > a").each(function(i, element) {
+      $("div.blog-title > h2 > a").each(function (i, element) {
         var srcURL = $(this).attr("href");
 
         if (srcURL.search("listing") != -1) {
           // Check if ad Exists in DB
-          db.Post.find({ srcURL: srcURL }, function(err, docs) {
+          db.Cars.find({ url: srcURL }, function (err, docs) {
             if (docs.length) {
               // console.log("EXISTS");
             } else {
               // console.log("nope it new");
 
               var result = {};
-              axios.get(srcURL).then(function(response) {
+              axios.get(srcURL).then(function (response) {
                 var $ = cheerio.load(response.data);
 
                 var workingTitle = $('h2[itemprop="name"]')
@@ -706,13 +720,10 @@ function scraperKMS(link) {
 
                 var model = workingTitle.slice(2).join(" ");
 
-                var workingPrice = $('span[itemprop="price"]').text();
-
-                workingTitle.push(workingPrice);
-
-                var postTitle = workingTitle.join(" ");
-
-                var price = workingPrice.replace(/[^0-9.-]+/g, "").trim(); // Clean price
+                var price = $('span[itemprop="price"]')
+                  .text()
+                  .replace(/[^0-9.-]+/g, "")
+                  .trim(); // Clean price
 
                 var description = $("#vehicle").text();
 
@@ -734,12 +745,6 @@ function scraperKMS(link) {
                   .text()
                   .trim();
 
-                var trim = $(".listing_category_engine")
-                  .children()
-                  .eq(1)
-                  .text()
-                  .trim();
-
                 var driverSide = $(".listing_category_drive")
                   .children()
                   .eq(1)
@@ -754,29 +759,22 @@ function scraperKMS(link) {
 
                 var imgs = [];
 
-                $("ul.slides > li > img").each(function(i) {
-                  imgs.push(
-                    $(this)
-                      .attr("src")
-                      .trim()
-                  );
+                $("ul.slides > li > img").each(function (i) {
+                  imgs.push($(this).attr("src").trim());
                 });
 
                 // =======
                 // Build Results object
                 result.user = "kms";
-                result.srcURL = srcURL;
-                result.postTitle = postTitle;
+                result.url = srcURL;
                 result.price = price;
-                result.year = yearCheck(year);
+                result.year = year;
                 result.make = make;
                 result.model = model;
-                result.parish = parishCheck(parish);
+                result.parish = parish;
                 result.description = description;
-                result.posted = false;
                 result.bodyType = bodyType;
                 result.transmission = transmission;
-                result.trim = trim;
                 result.driverSide = driverSide;
                 result.mileage = mileage;
                 result.imgs = imgs;
@@ -790,7 +788,7 @@ function scraperKMS(link) {
         } // end of else statement for listing check
       });
     })
-    .catch(err => console.log(err)); // end of crawler
+    .catch((err) => console.log("KMS Error" + err)); // end of crawler
 } // end of scraper KMS function
 
 // ==========================
@@ -798,121 +796,197 @@ function scraperKMS(link) {
 // ==========================
 
 function nullCheck(x) {
+  //config for audit
   var res = x;
+  res.comments = "";
   res.posted = true;
   res.date = moment().format("YYYYMMDD");
 
+  // Null Check
+  if (x === null || res === undefined) {
+    res.comments += "object null";
+    res.post = false;
+  }
+
+  // Price Check
   if (res.price === undefined || res.price === null) {
-    console.log(res.user + ": no price");
-    res.posted = false;
+    res.comments += "No price. ";
+    res.price = 0;
   } else if (parseInt(res.price) < 100000 || res.price > 30000000) {
-    res.posted = false;
-    console.log(res.user + ": price out of range: $" + res.price);
+    // res.posted = false;
+    res.comments += "Price out of range: $" + res.price + ". ";
+    res.price = 0;
   }
 
+  // Make Check
   if (res.make === undefined || res.make === null) {
-    console.log(res.user + ": no make");
+    res.comments += "No make. ";
     res.posted = false;
-  } else {
-    res.make = makeCheck(res.make);
-    if (carDB.includes(res.make)) {
-      res.posted = true; // matches
-    } else {
-      res.posted = false; // no match
-      console.log("no make matched - " + res.make);
-    }
-  }
-
-  if (res.model === undefined || res.model === null) {
-    console.log(res.user + ": no model");
-    res.posted = false;
-  }
-
-  if (res.year === undefined || res.year === null) {
-    console.log(res.user + ": no year");
-    res.posted = false;
-  } else {
-    res.year = yearCheck(res.year);
-  }
-
-  if (res.parish === undefined || res.parish === null) {
-    console.log(res.user + ": no parish");
-    res.posted = false;
-  } else {
-    res.parish = parishCheck(res.parish);
-  }
-
-  if (res.driverSide == "Left" || res.driverSide == "LHD") {
-    res.driverSide = "Left Hand Drive";
-  } else {
-    res.driver = "Right Hand Drive";
-  }
-
-  if (
-    res.transmission == "5speedmanual" ||
-    res.transmission == "6speedmanual"
+  } else if (
+    carDB.includes(makeCheck(res.make).toUpperCase()) &&
+    res.make != "Alfa Romeo"
   ) {
-    res.transmission = "Manual";
-  } else if (res.transmission == "Tipronic") {
-    res.transmission = "Automatic";
+    res.make = makeCheck(res.make);
+  } else {
+    res.posted = false;
+    res.comments += "Bad Make: " + res.make + " vs " + closest(res.make, carDB);
   }
 
+  // Model Check
+  if (res.model === undefined || res.model === null) {
+    res.comments += "No model. ";
+    res.posted = false;
+  }
+
+  // Year Check
+  if (res.year === undefined || res.year === null) {
+    res.comments += "No year. ";
+    res.posted = false;
+  } else if (isNaN(res.year)) {
+    res.comments += "Year is not a number. ";
+    res.posted = false;
+  } else if (res.year <= 1935 || res.year >= currentYear + 1) {
+    res.comments += "Year not between 1935-2100. ";
+    res.posted = false;
+  }
+
+  // Parish Check
+  if (res.parish === undefined || res.parish === null) {
+    res.comments += "No parish. ";
+    res.posted = false;
+  } else if (res.parish.startsWith("Saint Andrew")) {
+    res.parish = "Kingston/St. Andrew";
+  } else if (res.parish.startsWith("Saint ")) {
+    res.parish = res.parish.replace(/Saint /g, "St. ");
+  } else if (res.parish.startsWith("St")) {
+    res.parish = res.parish.replace(/St /g, "St. ");
+  } else if (res.parish.startsWith("Kingston")) {
+    res.parish = "Kingston/St. Andrew";
+  } else if (res.parish.startsWith("OutsideJamaica")) {
+    res.parish = "Kingston/St. Andrew";
+  } else if (
+    res.parish == "Trelawny" ||
+    res.parish == "Westmoreland" ||
+    res.parish == "Hanover" ||
+    res.parish == "Clarendon" ||
+    res.parish == "Portland" ||
+    res.parish == "Manchester"
+  ) {
+    //do nothing
+  } else {
+    res.comments += res.parish + ": Bad Parish. ";
+    res.posted = false;
+  }
+
+  // Driver Side Check
+  if (res.driverSide === undefined || res.driverSide === null) {
+    res.comments += "No driverSide. Default to RHD. ";
+    res.driverSide = "Right Hand Drive";
+  } else if (
+    res.driverSide.toLowerCase().includes("left") ||
+    res.driverSide.includes("LHD")
+  ) {
+    res.driverSide = "Left Hand Drive";
+  } else if (
+    res.driverSide.toLowerCase().includes("right") ||
+    res.driverSide.includes("RHD")
+  ) {
+    res.driverSide = "Right Hand Drive";
+  } else {
+    res.comments += res.driverSide + ": bad DriverSide. ";
+  }
+
+  // Transmission Check
+  if (res.transmission === undefined || res.transmission === null) {
+    res.comments += "No Transmission. Default to Automatic. ";
+    res.transmission = "Automatic";
+  } else if (res.transmission.toLowerCase().includes("manual")) {
+    res.transmission = "Manual";
+  } else if (
+    res.transmission == "Tiptronic" ||
+    res.transmission.toLowerCase().includes("automatic") ||
+    res.transmission == "CVT"
+  ) {
+    res.transmission = "Automatic";
+  } else {
+    res.comments = res.transmission + ": bad transmission. ";
+    res.posted = false;
+  }
+
+  // Contact Number Check
   if (res.contactNumber !== undefined && res.contactNumber.startsWith("1876")) {
     // nothing
   } else if (res.user == "jacars") {
     // still do nothing
   } else {
-    console.log(res.user + ": bad contact" + res.contactNumber);
-    res.posted = false;
+    res.comments += "bad contact: " + res.contactNumber + ". ";
+    // res.posted = false;
   }
 
-  if (res.posted === false) {
-    console.log(
-      res.user + " Verdict: \n - " + res.posted + " (" + res.srcURL + ")"
-    );
+  // Body Type Check
+  if (res.bodyType === undefined || res.bodyType === null) {
+    res.comments += "No Body Type. ";
+    res.posted = false;
+  } else if (bodyTypes.includes(res.bodyType.toUpperCase())) {
+    // good
+  } else if (
+    res.bodyType == "Station Wagon" ||
+    res.bodyType == "StationWagon"
+  ) {
+    res.comments += res.bodyType + " <- BodyType needed work. ";
+    res.bodyType = "Wagon";
+  } else if (res.bodyType == "Hatch Back") {
+    res.bodyType = "Hatchback";
+  } else if (res.bodyType == "Motor Bike" || res.bodyType == "Bike") {
+    res.comments += res.bodyType + " <- BodyType needed work. ";
+    res.bodyType = "Motorcycle";
+  } else if (
+    res.bodyType == "Sports Utility Vehicle" ||
+    res.bodyType == "Sports Activity Vehicle" ||
+    res.bodyType == "Compact Utility Vehicle"
+  ) {
+    res.comments += res.bodyType + " <- BodyType needed work. ";
+    res.bodyType = "SUV";
+  } else if (
+    res.bodyType == "4 Door Coupe" ||
+    res.bodyType == "Estate" ||
+    res.bodyType == "Grand Coupe"
+  ) {
+    res.comments += res.bodyType + " <- BodyType needed work. ";
+    res.bodyType = "Sedan";
+  } else if (res.bodyType == "Van" || res.bodyType == "Vans") {
+    res.comments += res.bodyType + " <- BodyType needed work. ";
+    res.bodyType = "Minivan";
+  } else {
+    res.comments +=
+      "Doesn't Match: " +
+      res.bodyType +
+      " Vs " +
+      closest(res.bodyType, bodyTypes) +
+      "(" +
+      distance(res.bodyType, closest(res.bodyType, bodyTypes)) +
+      "). Default to VS";
+    res.bodyType = closest(res.bodyType, bodyTypes);
   }
+
+  // damage check test
+  axios
+    .get("https://beegojm.com")
+    .then(function (response) {
+      var $ = cheerio.load(response.data);
+    })
+    .catch(function (error) {
+      console.log("Error from beego: " + error.message);
+    });
 
   updatedb(res); // update Database Call
 } // end nullCheck
 
 function updatedb(result) {
   // Add to database
-  db.Post.create(result).catch(err =>
+  db.Cars.create(result).catch((err) =>
     console.log(err + "\nerror in create statement")
   ); //end of db create
-}
-
-// Year Checker for digit and between range
-function yearCheck(year) {
-  if (isNaN(year)) {
-    console.log("false: Not a number");
-    return null;
-  } else if (year <= 1935 || year >= 2100) {
-    console.log("false: not between 1935-2100");
-    return null;
-  } else return year;
-}
-
-function parishCheck(location) {
-  var parish = undefined;
-
-  if (location == undefined) {
-    //do nothing
-  } else if (location.startsWith("Saint Andrew")) {
-    parish = "Kingston/St. Andrew";
-  } else if (location.startsWith("Saint ")) {
-    parish = location.replace(/Saint /g, "St. ");
-  } else if (location.startsWith("St")) {
-    parish = location.replace(/St /g, "St. ");
-  } else if (location.startsWith("Kingston")) {
-    parish = "Kingston/St. Andrew";
-  } else if (location.startsWith("OutsideJamaica")) {
-    parish = "Kingston/St. Andrew";
-  } else {
-    parish = location;
-  }
-
-  return parish;
 }
 
 function makeCheck(make) {
@@ -921,7 +995,7 @@ function makeCheck(make) {
   } else if (make.startsWith("Land")) {
     return "Land Rover";
   } else if (make.startsWith("Mini")) {
-    return "Mini Cooper ";
+    return "Mini";
   } else return make;
 }
 
@@ -933,14 +1007,13 @@ function contactCheck(contactNumber) {
   } else return contactNumber;
 }
 
-function driverSideCheck(driverSide) {}
 // ==========================
 // ====== AUTOMATION ========
 // ==========================
 
 const job = new CronJob(
   "0 */15 * * * *",
-  function() {
+  function () {
     checker(); // Start Auto Ads
     pageScraper("https://www.jacars.net/search/"); // Start jaCArs Ads
     retNum(); // ContactCleanert
@@ -955,17 +1028,3 @@ const job = new CronJob(
   null,
   true
 );
-
-// CAR QUERY VALIDATOR
-axios
-  .get("https://vpic.nhtsa.dot.gov/api/vehicles/getallmakes?format=json")
-  .then(function(results) {
-    data = results.data.Results;
-    data.forEach(function(val, i) {
-      addCar(val.Make_Name);
-    });
-  });
-
-function addCar(car) {
-  carDB.push(car);
-}
