@@ -6,6 +6,9 @@ const router = require("express").Router();
 const axios = require("axios");
 const cheerio = require("cheerio");
 const CronJob = require("cron").CronJob;
+const puppeteer = require("puppeteer");
+const { distance, closest } = require("fastest-levenshtein");
+const currentYear = new Date().getFullYear();
 
 // CSV Tools
 const fs = require("fs");
@@ -15,16 +18,106 @@ const path = require("path");
 
 // Require all models
 const db = require("../models");
-const fields = ["url", "year", "make", "model", "price", "parish"];
+const fields = [
+  "url",
+  "posted",
+  "user",
+  "year",
+  "make",
+  "model",
+  "price",
+  "parish",
+  "bodyType",
+  "transmission",
+  "driverSide",
+  "contactNumber",
+  "comments",
+];
 var carDB = [];
+const bodyTypes = [
+  "SEDAN",
+  "COUPE",
+  "VAN",
+  "CONVERTIBLE",
+  "PICKUP",
+  "TRUCK",
+  "BUS",
+  "SUV",
+  "HATCHBACK",
+  "WAGON",
+  "MINIVAN",
+  "MOTORCYCLE",
+  "WRECKER",
+];
 
 // ==========================
 // ======== Routes ==========
 // ==========================
 
+router.get("/carsforsale", function (req, res) {
+  // Build query to get the lastest listings sorted by date
+  var query = db.Cars.find({}).sort({ _id: -1 });
+  var oldLimt = currentYear - 10;
+
+  query.where("posted").equals(true);
+
+  query.where("price").gte(1000000);
+
+  query.where("year").gte(oldLimt);
+  // verify it has at least one image
+  query.where("imgs").gt([]);
+  // Limit to 200
+
+  query.limit(200);
+
+  query.exec(function (err, docs) {
+    res.send(docs);
+  });
+});
+
+router.get("/undermil", function (req, res) {
+  // Build query to get the lastest listings sorted by date
+  var query = db.Cars.find({}).sort({ _id: -1 });
+  var oldLimt = currentYear - 10;
+
+  query.where("posted").equals(true);
+
+  query.where("price").lt(1000000);
+
+  query.where("year").gte(oldLimt);
+  // verify it has at least one image
+  query.where("imgs").gt([]);
+  // Limit to 200
+
+  query.limit(200);
+
+  query.exec(function (err, docs) {
+    res.send(docs);
+  });
+});
+
 router.get("/latest", function (req, res) {
   // Build query to get the lastest listings sorted by date
   var query = db.Cars.find({}).sort({ _id: -1 });
+  var oldLimt = currentYear - 10;
+
+  query.where("posted").equals(true);
+
+  query.where("year").lt(oldLimt);
+  // verify it has at least one image
+  query.where("imgs").gt([]);
+  // Limit to 500
+
+  query.limit(300);
+
+  query.exec(function (err, docs) {
+    res.send(docs);
+  });
+});
+
+router.get("/2019", function (req, res) {
+  // Build query to get the lastest listings sorted by date
+  var query = db.Post.find({}).sort({ _id: -1 });
 
   // verify it has a contact number
   query
@@ -41,6 +134,15 @@ router.get("/latest", function (req, res) {
 
   query.exec(function (err, docs) {
     res.send(docs);
+  });
+});
+
+// Return count of all listings
+router.get("/2019count", function (req, res) {
+  db.Post.countDocuments(function (err, docs) {
+    response = "";
+    response += docs;
+    res.send(response);
   });
 });
 
@@ -77,7 +179,7 @@ router.get("/csv", function (req, res) {
         }
       });
     }
-  }).limit(5000);
+  }).limit(15000);
 });
 
 module.exports = router;
@@ -86,10 +188,22 @@ module.exports = router;
 // ========== APP ===========
 // ==========================
 
+// CAR QUERY VALIDATOR
+axios
+  .get("https://vpic.nhtsa.dot.gov/api/vehicles/getallmakes?format=json")
+  .then(function (results) {
+    data = results.data.Results;
+    data.forEach(function (val, i) {
+      carDB.push(val.Make_Name);
+    });
+  })
+  .catch(function (error) {
+    console.log("Error " + error.message);
+  });
+
 // ===========
 // Puppeteer
 // ===========
-const puppeteer = require("puppeteer");
 
 async function puppetMaster(res) {
   if (res.length > 0) {
@@ -129,38 +243,43 @@ async function puppetMaster(res) {
         { url: newItem.url },
         results
       ).catch((err) =>
-        console.log("error in the contacts db findAndUpdate function")
+        console.log("error in the contacts db findAndUpdate function." + err)
       ); // end of db findOneandUdpdate
     } // end of for loop statement
 
     await browser.close();
-    console.log("browser closed\n======");
   } // End if Statement
 }
 
 // A - CRAWLER: AUTO ADS CHECKER
 // =====================================
 function checker() {
-  axios.get("https://www.autoadsja.com/rss.asp").then(function (response) {
-    // Then, we load that into cheerio and save it to $ for a shorthand selector
-    var $ = cheerio.load(response.data, { xmlMode: true });
+  axios
+    .get("https://www.autoadsja.com/rss.asp")
+    .then(function (response) {
+      // Then, we load that into cheerio and save it to $ for a shorthand selector
+      var $ = cheerio.load(response.data, { xmlMode: true });
 
-    $("item").each(function (i, element) {
-      var srcURL = $(this).children("link").text();
+      $("item").each(function (i, element) {
+        var srcURL = $(this).children("link").text();
 
-      // Check
-      db.Cars.find({ url: srcURL }, function (err, docs) {
-        if (docs.length) {
-          // no ad found
-        } else {
-          // console.log("Ad Found: " + srcURL);
-          scraper(srcURL);
-        }
+        // Check
+        db.Cars.find({ url: srcURL }, function (err, docs) {
+          if (docs.length) {
+            // no ad found
+          } else {
+            scraper(srcURL);
+          }
+        })
+          .limit(1000)
+          .catch((err) => console.log(`Failed to find documents: ${err}`));
+        // end post function
       });
-      // end post function
+      // end each function
+    })
+    .catch(function (error) {
+      console.log("Error " + error.message);
     });
-    // end each function
-  });
   // end of axios function
   return "hello from checker function";
 }
@@ -168,100 +287,105 @@ function checker() {
 // B - SCRAPER: AUTOADS
 // =====================================
 function scraper(link) {
-  axios.get(link).then(function (response) {
-    // Then, we load that into cheerio and save it to $ for a shorthand selector
-    var $ = cheerio.load(response.data);
+  axios
+    .get(link)
+    .then(function (response) {
+      // Then, we load that into cheerio and save it to $ for a shorthand selector
+      var $ = cheerio.load(response.data);
 
-    // Save an empty result object
-    var result = {};
+      // Save an empty result object
+      var result = {};
 
-    // crawled variables
-    var title = $(".price-tag > h1").text();
-    var price = $(".price-tag > h2")
-      .text()
-      .replace(/[^0-9.-]+/g, "");
-    var ymm = title.split(" "); // break Title into array of text
-    var year = ymm[0];
-    var make = ymm[1].replace(/\-.*/g, "").trim();
-    var model = ymm[2].replace(/\-.*/g, "").trim();
-    if (
-      $(".per-detail > ul > li") !== undefined &&
-      $(".per-detail > ul > li")[0] !== undefined
-    ) {
-      // Check array undefined to catch err from array
-      var location = $(".per-detail > ul > li")[0]
-        .children[0].data.replace("Location: ", "")
-        .replace(/\s+/g, "")
-        .replace(".", ". ");
+      // crawled variables
+      var title = $(".price-tag > h1").text();
+      var price = $(".price-tag > h2")
+        .text()
+        .replace(/[^0-9.-]+/g, "");
+      var ymm = title.split(" "); // break Title into array of text
+      var year = ymm[0];
+      var make = ymm[1].replace(/\-.*/g, "").trim();
+      var model = ymm[2].replace(/\-.*/g, "").trim();
+      if (
+        $(".per-detail > ul > li") !== undefined &&
+        $(".per-detail > ul > li")[0] !== undefined
+      ) {
+        // Check array undefined to catch err from array
+        var location = $(".per-detail > ul > li")[0]
+          .children[0].data.replace("Location: ", "")
+          .replace(/\s+/g, "")
+          .replace(".", ". ");
 
-      var bodyType = $(".per-detail > ul > li")[1]
-        .children[0].data.replace("Body Type: ", "")
-        .replace(/\s+/g, "")
-        .replace(".", ". ");
+        var bodyType = $(".per-detail > ul > li")[1]
+          .children[0].data.replace("Body Type: ", "")
+          .replace(/\s+/g, "")
+          .replace(".", ". ");
 
-      var driverSide = $(".per-detail > ul > li")[2]
-        .children[0].data.replace("Driver Side: ", "")
-        .replace(/\s+/g, "")
-        .replace(".", ". ");
+        var driverSide = $(".per-detail > ul > li")[2]
+          .children[0].data.replace("Driver Side: ", "")
+          .replace(/\s+/g, "")
+          .replace(".", ". ");
 
-      var transmission = $(".per-detail > ul > li")[4]
-        .children[0].data.replace("Transmission: ", "")
-        .replace(/\s+/g, "")
-        .replace(".", ". ");
+        var transmission = $(".per-detail > ul > li")[4]
+          .children[0].data.replace("Transmission: ", "")
+          .replace(/\s+/g, "")
+          .replace(".", ". ");
 
-      var mileage = $(".per-detail > ul > li")[7]
-        .children[0].data.replace("Mileage: ", "")
-        .replace(/\s+/g, "")
-        .replace(".", ". ");
-    }
+        var mileage = $(".per-detail > ul > li")[7]
+          .children[0].data.replace("Mileage: ", "")
+          .replace(/\s+/g, "")
+          .replace(".", ". ");
+      }
 
-    var contact = $(".contact_details > a")
-      .attr("href")
-      .replace(/[^0-9]+/g, "");
+      var contact = $(".contact_details > a")
+        .attr("href")
+        .replace(/[^0-9]+/g, "");
 
-    // Get Features for description
-    var features = [];
+      // Get Features for description
+      var features = [];
 
-    features.push($(".vehicle-description").text());
+      features.push($(".vehicle-description").text());
 
-    $(".per-detail > ul > li").each(function (i) {
-      features.push($(this).text());
-    });
+      $(".per-detail > ul > li").each(function (i) {
+        features.push($(this).text());
+      });
 
-    features.push($(".contact_details").text());
+      features.push($(".contact_details").text());
 
-    var description = "";
-    features.forEach(function (element) {
-      description += element.toString();
-      description += "\n";
-    });
+      var description = "";
+      features.forEach(function (element) {
+        description += element.toString();
+        description += "\n";
+      });
 
-    // Get Images
-    var imgs = [];
-    $(".product-images > .prod-box > a").each(function (i) {
-      imgs.push($(this).attr("href"));
-    });
+      // Get Images
+      var imgs = [];
+      $(".product-images > .prod-box > a").each(function (i) {
+        imgs.push($(this).attr("href"));
+      });
 
-    // Update Results object
-    result.user = "autoadsja";
-    result.url = response.config.url;
-    result.price = price;
-    result.year = year;
-    result.make = make;
-    result.model = model;
-    result.parish = location;
-    result.contactNumber = contact;
-    result.description = description;
-    result.imgs = imgs;
-    result.price = price;
-    result.bodyType = bodyType;
-    result.driverSide = driverSide;
-    result.transmission = transmission;
-    result.mileage = mileage;
-    result.posted = false;
+      // Update Results object
+      result.user = "autoadsja";
+      result.url = response.config.url;
+      result.price = price;
+      result.year = year;
+      result.make = make;
+      result.model = model;
+      result.parish = location;
+      result.contactNumber = contact;
+      result.description = description;
+      result.imgs = imgs;
+      result.price = price;
+      result.bodyType = bodyType;
+      result.driverSide = driverSide;
+      result.transmission = transmission;
+      result.mileage = mileage;
+      result.posted = false;
 
-    nullCheck(result);
-  });
+      nullCheck(result);
+    })
+    .catch(function (error) {
+      console.log("Error from autoads axios" + error.message);
+    }); // end of axios statement
 
   return "hello from pageCrawler";
   // end of crawler
@@ -381,10 +505,10 @@ function pageScraper(element) {
               nullCheck(result);
             }); // end of axios statement
           } // end of else
-        }); // end db check
+        }).limit(1000); // end db check
       }); // end of crawler
     })
-    .catch((err) => console.log(err));
+    .catch((err) => console.log("JAcars Axio Error" + err));
 
   return "hello from pageScraper";
   // end of crawler
@@ -394,7 +518,7 @@ function pageScraper(element) {
 // =====================================
 function retNum() {
   // Build query to get the lastest listings sorted by date
-  var query = db.Post.find({}).sort({ _id: -1 });
+  var query = db.Cars.find({}).sort({ _id: -1 });
 
   // verify if has a contact number
   query.where("contactNumber").eq(null);
@@ -403,7 +527,7 @@ function retNum() {
   query.where("user").eq("jacars");
 
   // only pull ones that pass nullcheck
-  query.where("posted").eq(true)
+  query.where("posted").eq(true);
 
   // Limit to 500
   query.limit(3);
@@ -548,12 +672,13 @@ function scaperJCO(link) {
               attr.user = "jamaicaonlineclassifieds";
               attr.url = srcURL;
               attr.imgs = imgs;
-              // attr.date = moment().format("YYYYMMDDhhmmss");
 
               nullCheck(attr);
             }); // end second Axios statement
           }
-        }); // end db find statement
+        })
+          .limit(1000)
+          .catch((err) => console.log(`Failed to find documents: ${err}`)); // end db find statement
       } // end filter for ex  ternal links
     }); // end search for each item
   }); // end axio function
@@ -574,7 +699,7 @@ function scraperKMS(link) {
 
         if (srcURL.search("listing") != -1) {
           // Check if ad Exists in DB
-          db.Post.find({ srcURL: srcURL }, function (err, docs) {
+          db.Cars.find({ url: srcURL }, function (err, docs) {
             if (docs.length) {
               // console.log("EXISTS");
             } else {
@@ -595,13 +720,10 @@ function scraperKMS(link) {
 
                 var model = workingTitle.slice(2).join(" ");
 
-                var workingPrice = $('span[itemprop="price"]').text();
-
-                workingTitle.push(workingPrice);
-
-                var postTitle = workingTitle.join(" ");
-
-                var price = workingPrice.replace(/[^0-9.-]+/g, "").trim(); // Clean price
+                var price = $('span[itemprop="price"]')
+                  .text()
+                  .replace(/[^0-9.-]+/g, "")
+                  .trim(); // Clean price
 
                 var description = $("#vehicle").text();
 
@@ -618,12 +740,6 @@ function scraperKMS(link) {
                   .trim();
 
                 var parish = $(".listing_category_location")
-                  .children()
-                  .eq(1)
-                  .text()
-                  .trim();
-
-                var trim = $(".listing_category_engine")
                   .children()
                   .eq(1)
                   .text()
@@ -650,18 +766,15 @@ function scraperKMS(link) {
                 // =======
                 // Build Results object
                 result.user = "kms";
-                result.srcURL = srcURL;
-                result.postTitle = postTitle;
+                result.url = srcURL;
                 result.price = price;
-                result.year = yearCheck(year);
+                result.year = year;
                 result.make = make;
                 result.model = model;
                 result.parish = parish;
                 result.description = description;
-                result.posted = false;
                 result.bodyType = bodyType;
                 result.transmission = transmission;
-                result.trim = trim;
                 result.driverSide = driverSide;
                 result.mileage = mileage;
                 result.imgs = imgs;
@@ -675,7 +788,7 @@ function scraperKMS(link) {
         } // end of else statement for listing check
       });
     })
-    .catch((err) => console.log(err)); // end of crawler
+    .catch((err) => console.log("KMS Error" + err)); // end of crawler
 } // end of scraper KMS function
 
 // ==========================
@@ -683,11 +796,19 @@ function scraperKMS(link) {
 // ==========================
 
 function nullCheck(x) {
+  //config for audit
   var res = x;
   res.comments = "";
   res.posted = true;
   res.date = moment().format("YYYYMMDD");
 
+  // Null Check
+  if (x === null || res === undefined) {
+    res.comments += "object null";
+    res.post = false;
+  }
+
+  // Price Check
   if (res.price === undefined || res.price === null) {
     res.comments += "No price. ";
     res.price = 0;
@@ -697,27 +818,41 @@ function nullCheck(x) {
     res.price = 0;
   }
 
+  // Make Check
   if (res.make === undefined || res.make === null) {
     res.comments += "No make. ";
     res.posted = false;
-  } else {
+  } else if (
+    carDB.includes(makeCheck(res.make).toUpperCase()) &&
+    res.make != "Alfa Romeo"
+  ) {
     res.make = makeCheck(res.make);
+  } else {
+    res.posted = false;
+    res.comments += "Bad Make: " + res.make + " vs " + closest(res.make, carDB);
   }
 
+  // Model Check
   if (res.model === undefined || res.model === null) {
     res.comments += "No model. ";
     res.posted = false;
   }
 
+  // Year Check
   if (res.year === undefined || res.year === null) {
     res.comments += "No year. ";
     res.posted = false;
-  } else {
-    res.year = yearCheck(res.year);
+  } else if (isNaN(res.year)) {
+    res.comments += "Year is not a number. ";
+    res.posted = false;
+  } else if (res.year <= 1935 || res.year >= currentYear + 1) {
+    res.comments += "Year not between 1935-2100. ";
+    res.posted = false;
   }
 
+  // Parish Check
   if (res.parish === undefined || res.parish === null) {
-    console.log(res.user + ": no parish");
+    res.comments += "No parish. ";
     res.posted = false;
   } else if (res.parish.startsWith("Saint Andrew")) {
     res.parish = "Kingston/St. Andrew";
@@ -737,15 +872,16 @@ function nullCheck(x) {
     res.parish == "Portland" ||
     res.parish == "Manchester"
   ) {
-    parish = res.parish;
+    //do nothing
   } else {
     res.comments += res.parish + ": Bad Parish. ";
     res.posted = false;
   }
 
+  // Driver Side Check
   if (res.driverSide === undefined || res.driverSide === null) {
-    res.comments += "No driverSide";
-    res.posted = false;
+    res.comments += "No driverSide. Default to RHD. ";
+    res.driverSide = "Right Hand Drive";
   } else if (
     res.driverSide.toLowerCase().includes("left") ||
     res.driverSide.includes("LHD")
@@ -757,17 +893,19 @@ function nullCheck(x) {
   ) {
     res.driverSide = "Right Hand Drive";
   } else {
-    res.comments += res.driverSide + ": bad DriverSide";
+    res.comments += res.driverSide + ": bad DriverSide. ";
   }
 
+  // Transmission Check
   if (res.transmission === undefined || res.transmission === null) {
-    res.comments += "No Transmission";
-    res.posted = false;
+    res.comments += "No Transmission. Default to Automatic. ";
+    res.transmission = "Automatic";
   } else if (res.transmission.toLowerCase().includes("manual")) {
     res.transmission = "Manual";
   } else if (
     res.transmission == "Tiptronic" ||
-    res.transmission.toLowerCase().includes("automatic")
+    res.transmission.toLowerCase().includes("automatic") ||
+    res.transmission == "CVT"
   ) {
     res.transmission = "Automatic";
   } else {
@@ -775,18 +913,71 @@ function nullCheck(x) {
     res.posted = false;
   }
 
+  // Contact Number Check
   if (res.contactNumber !== undefined && res.contactNumber.startsWith("1876")) {
     // nothing
   } else if (res.user == "jacars") {
     // still do nothing
   } else {
-    res.comments += "bad contact: " + res.contactNumber;
+    res.comments += "bad contact: " + res.contactNumber + ". ";
     // res.posted = false;
   }
 
-  if (res.posted === false) {
-    res.comments += " Verdict: \n - " + res.posted + ". ";
+  // Body Type Check
+  if (res.bodyType === undefined || res.bodyType === null) {
+    res.comments += "No Body Type. ";
+    res.posted = false;
+  } else if (bodyTypes.includes(res.bodyType.toUpperCase())) {
+    // good
+  } else if (
+    res.bodyType == "Station Wagon" ||
+    res.bodyType == "StationWagon"
+  ) {
+    res.comments += res.bodyType + " <- BodyType needed work. ";
+    res.bodyType = "Wagon";
+  } else if (res.bodyType == "Hatch Back") {
+    res.bodyType = "Hatchback";
+  } else if (res.bodyType == "Motor Bike" || res.bodyType == "Bike") {
+    res.comments += res.bodyType + " <- BodyType needed work. ";
+    res.bodyType = "Motorcycle";
+  } else if (
+    res.bodyType == "Sports Utility Vehicle" ||
+    res.bodyType == "Sports Activity Vehicle" ||
+    res.bodyType == "Compact Utility Vehicle"
+  ) {
+    res.comments += res.bodyType + " <- BodyType needed work. ";
+    res.bodyType = "SUV";
+  } else if (
+    res.bodyType == "4 Door Coupe" ||
+    res.bodyType == "Estate" ||
+    res.bodyType == "Grand Coupe"
+  ) {
+    res.comments += res.bodyType + " <- BodyType needed work. ";
+    res.bodyType = "Sedan";
+  } else if (res.bodyType == "Van" || res.bodyType == "Vans") {
+    res.comments += res.bodyType + " <- BodyType needed work. ";
+    res.bodyType = "Minivan";
+  } else {
+    res.comments +=
+      "Doesn't Match: " +
+      res.bodyType +
+      " Vs " +
+      closest(res.bodyType, bodyTypes) +
+      "(" +
+      distance(res.bodyType, closest(res.bodyType, bodyTypes)) +
+      "). Default to VS";
+    res.bodyType = closest(res.bodyType, bodyTypes);
   }
+
+  // damage check test
+  axios
+    .get("https://beegojm.com")
+    .then(function (response) {
+      var $ = cheerio.load(response.data);
+    })
+    .catch(function (error) {
+      console.log("Error from beego: " + error.message);
+    });
 
   updatedb(res); // update Database Call
 } // end nullCheck
@@ -798,24 +989,13 @@ function updatedb(result) {
   ); //end of db create
 }
 
-// Year Checker for digit and between range
-function yearCheck(year) {
-  if (isNaN(year)) {
-    console.log("false: Not a number");
-    return null;
-  } else if (year <= 1935 || year >= 2100) {
-    console.log("false: not between 1935-2100");
-    return null;
-  } else return year;
-}
-
 function makeCheck(make) {
   if (make.startsWith("Merc") || make.startsWith("Benz")) {
     return "Mercedes-Benz";
   } else if (make.startsWith("Land")) {
     return "Land Rover";
   } else if (make.startsWith("Mini")) {
-    return "Mini Cooper ";
+    return "Mini";
   } else return make;
 }
 
@@ -827,7 +1007,6 @@ function contactCheck(contactNumber) {
   } else return contactNumber;
 }
 
-function driverSideCheck(driverSide) {}
 // ==========================
 // ====== AUTOMATION ========
 // ==========================
@@ -835,11 +1014,11 @@ function driverSideCheck(driverSide) {}
 const job = new CronJob(
   "0 */15 * * * *",
   function () {
-    // checker(); // Start Auto Ads
+    checker(); // Start Auto Ads
     pageScraper("https://www.jacars.net/search/"); // Start jaCArs Ads
-    // retNum(); // ContactCleanert
-    // scaperJCO("https://jamaicaclassifiedonline.com/auto/cars/1");
-    // scraperKMS("https://khaleelmotorsports.com/?s=");
+    retNum(); // ContactCleanert
+    scaperJCO("https://jamaicaclassifiedonline.com/auto/cars/1");
+    scraperKMS("https://khaleelmotorsports.com/?s=");
     console.log("Cron Run, Next Run:");
     console.log(this.nextDates());
   },
