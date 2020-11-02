@@ -26,6 +26,7 @@ const fields = [
   "make",
   "model",
   "price",
+  "date",
   "parish",
   "bodyType",
   "transmission",
