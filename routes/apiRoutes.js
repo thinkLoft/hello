@@ -18,6 +18,7 @@ const path = require("path");
 
 // Require all models
 const db = require("../models");
+const { Console } = require("console");
 const fields = [
   "url",
   "posted",
@@ -69,7 +70,7 @@ router.get("/carsforsale", function (req, res) {
   query.where("imgs").gt([]);
   // Limit to 200
 
-  query.limit(200);
+  query.limit(500);
 
   query.exec(function (err, docs) {
     res.send(docs);
@@ -109,7 +110,7 @@ router.get("/latest", function (req, res) {
   query.where("imgs").gt([]);
   // Limit to 500
 
-  query.limit(300);
+  query.limit(500);
 
   query.exec(function (err, docs) {
     res.send(docs);
@@ -360,7 +361,7 @@ function scraper(link) {
 
       // Get Images
       var imgs = [];
-      $(".product-images > .prod-box > a").each(function (i) {
+      $(".gallery__thumbs > a").each(function (i) {
         imgs.push($(this).attr("href"));
       });
 
@@ -809,6 +810,12 @@ function nullCheck(x) {
     res.post = false;
   }
 
+  // Image Check
+  if (res.imgs.length === 0) {
+    res.comments += "No images. ";
+    res.posted = false;
+  }
+
   // Price Check
   if (res.price === undefined || res.price === null) {
     res.comments += "No price. ";
@@ -970,17 +977,8 @@ function nullCheck(x) {
     res.bodyType = closest(res.bodyType, bodyTypes);
   }
 
-  // damage check test
-  axios
-    .get("https://beegojm.com")
-    .then(function (response) {
-      var $ = cheerio.load(response.data);
-    })
-    .catch(function (error) {
-      console.log("Error from beego: " + error.message);
-    });
-
   updatedb(res); // update Database Call
+  console.log(res.comments);
 } // end nullCheck
 
 function updatedb(result) {
@@ -1017,7 +1015,7 @@ const job = new CronJob(
   function () {
     checker(); // Start Auto Ads
     pageScraper("https://www.jacars.net/search/"); // Start jaCArs Ads
-    retNum(); // ContactCleanert
+    retNum(); // ContactCleaner
     scaperJCO("https://jamaicaclassifiedonline.com/auto/cars/1");
     scraperKMS("https://khaleelmotorsports.com/?s=");
     console.log("Cron Run, Next Run:");
