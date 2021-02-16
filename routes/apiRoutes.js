@@ -9,6 +9,9 @@ const CronJob = require("cron").CronJob;
 const puppeteer = require("puppeteer");
 const { distance, closest } = require("fastest-levenshtein");
 const currentYear = new Date().getFullYear();
+const nodemailer = require("nodemailer");
+var stats = require("stats-lite");
+require("dotenv").config({ path: "./../.env" });
 
 // CSV Tools
 const fs = require("fs");
@@ -19,6 +22,7 @@ const path = require("path");
 // Require all models
 const db = require("../models");
 const { Console } = require("console");
+const { STATUS_CODES } = require("http");
 const fields = [
   "url",
   "posted",
@@ -184,6 +188,39 @@ router.get("/csv", function (req, res) {
   }).limit(15000);
 });
 
+// Calculator
+router.get("/data/:yearUpper/:yearLower/:make/:model/", function (req, res) {
+  // Build query to get the lastest listings sorted by date
+  var query = db.Cars.find({}).sort({ _id: -1 });
+
+  query.where("year").lte(req.params.yearUpper);
+
+  query.where("year").gte(req.params.yearLower);
+
+  query
+    .where("make")
+    .equals(req.params.make.charAt(0).toUpperCase() + req.params.make.slice(1));
+
+  query
+    .where("model")
+    .equals(
+      req.params.model.charAt(0).toUpperCase() + req.params.model.slice(1)
+    );
+
+  // query.where("posted").equals(true);
+
+  query.where("price").gte("100000");
+  query.where("price").lte("10000000");
+
+  // query.limit(20);
+
+  query.exec(function (err, docs) {
+    var data = priceCheck(docs);
+    console.log(data);
+    res.send(data);
+  });
+});
+
 module.exports = router;
 
 // ==========================
@@ -253,11 +290,100 @@ async function puppetMaster(res) {
   } // End if Statement
 }
 
+function mailerConditions(res) {
+  // console.log(res);
+  if (
+    res.year >= 2001 &&
+    // res.year <= 2005 &&
+    // res.model.includes("Honda") &&
+    res.price <= 600000 &&
+    res.price >= 100000
+  ) {
+    // Build query to get the lastest listings sorted by date
+    var query = db.Cars.find({}).sort({ _id: -1 });
+
+    query.where("year").equals(res.year);
+
+    query.where("make").equals(res.make);
+
+    query.where("model").equals(res.model);
+
+    // query.where("posted").equals(true);
+
+    query.where("price").gte("100000");
+    // query.where("price").lte("10000000");
+
+    // query.limit(20);
+
+    query.exec(function (err, docs) {
+      var data = priceCheck(docs);
+      // console.log(data);
+      mailer(res, data);
+    });
+  }
+}
+
+async function mailer(res, data) {
+  // Generate test SMTP service account from ethereal.email
+
+  // create reusable transporter object using the default SMTP transport
+  let transporter = nodemailer.createTransport({
+    host: process.env.AUTH_HOST,
+    port: process.env.AUTH_PORT,
+    secure: true, // true for 465, false for other ports
+    auth: {
+      user: process.env.AUTH_USER, // generated ethereal user
+      pass: process.env.AUTH_PASS, // generated ethereal password
+    },
+  });
+
+  let title =
+    res.year +
+    " " +
+    res.make +
+    " " +
+    res.model +
+    " $" +
+    res.price +
+    "(Avg: $" +
+    data.average +
+    ")";
+  let message =
+    '<h4> Here is a car that matches your filter: </h4>\n\n<a href="' +
+    res.url +
+    '">' +
+    res.url +
+    "</a><br><br>Car: " +
+    title +
+    "<br>Parish: " +
+    res.parish +
+    "<br> Contact Number: " +
+    res.contactNumber;
+
+  // send mail with defined transport object
+  await transporter.sendMail(
+    {
+      from: process.env.FROM_EMAIL, // sender address
+      to: process.env.TO_EMAIL, // list of receivers
+      subject: "New car listing alert from Beego: " + title, // Subject line
+      text: "This is a test", // plain text body
+      html: message, // html body
+    },
+    (err, info) => {
+      if (info != undefined) {
+        // console.log(info.envelope);
+        // console.log(info.messageId);
+      } else if (err) {
+        console.log(err);
+      }
+    }
+  );
+}
 // A - CRAWLER: AUTO ADS CHECKER
 // =====================================
 function checker() {
   axios
-    .get("https://www.autoadsja.com/rss.asp")
+    .get(process.env.SITE1)
     .then(function (response) {
       // Then, we load that into cheerio and save it to $ for a shorthand selector
       var $ = cheerio.load(response.data, { xmlMode: true });
@@ -397,7 +523,7 @@ function scraper(link) {
 // =====================================
 function pageScraper(element) {
   axios
-    .get(element)
+    .get(element.toString())
     .then(function (response) {
       var $ = cheerio.load(response.data);
 
@@ -811,7 +937,7 @@ function nullCheck(x) {
   }
 
   // Image Check
-  if (res.imgs.length === 0) {
+  if (res.imgs === undefined || res.imgs === null || res.imgs.length === 0) {
     res.comments += "No images. ";
     res.posted = false;
   }
@@ -978,7 +1104,9 @@ function nullCheck(x) {
   }
 
   updatedb(res); // update Database Call
-  console.log(res.comments);
+  if (res.posted == true) {
+    mailerConditions(res);
+  }
 } // end nullCheck
 
 function updatedb(result) {
@@ -1006,6 +1134,25 @@ function contactCheck(contactNumber) {
   } else return contactNumber;
 }
 
+function priceCheck(docs) {
+  var data = {};
+  var pricingArray = [];
+  data.count = docs.length;
+  data.total = 0;
+  docs.forEach(function (element, counter) {
+    data.total += element.price;
+    pricingArray.push(element.price);
+  });
+  data.average = stats.mean(pricingArray);
+  data.std = stats.stdev(pricingArray);
+  data.high = data.average + data.std * 2;
+  data.above = data.average + data.std;
+  data.below = data.average - data.std;
+  data.great = data.average - data.std * 2;
+  data.crazy = data.average - data.std * 3;
+  return data;
+}
+
 // ==========================
 // ====== AUTOMATION ========
 // ==========================
@@ -1014,10 +1161,10 @@ const job = new CronJob(
   "0 */15 * * * *",
   function () {
     checker(); // Start Auto Ads
-    pageScraper("https://www.jacars.net/search/"); // Start jaCArs Ads
+    pageScraper(process.env.SITE2); // Start jaCArs Ads
     retNum(); // ContactCleaner
-    scaperJCO("https://jamaicaclassifiedonline.com/auto/cars/1");
-    scraperKMS("https://khaleelmotorsports.com/?s=");
+    scaperJCO(process.env.SITE3);
+    scraperKMS(process.env.SITE4);
     console.log("Cron Run, Next Run:");
     console.log(this.nextDates());
   },

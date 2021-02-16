@@ -8,6 +8,7 @@ const fs = require("fs");
 const request = require("request");
 const app = express();
 const PORT = process.env.PORT || 3001;
+require("dotenv").config();
 
 // define Routes
 const routes = require("./routes");
@@ -30,10 +31,10 @@ app.use(logger("dev"));
 
 // Connect to the Mongo DB
 mongoose.connect(process.env.MONGODB_URI || "mongodb://localhost/helloV1", {
-  useNewUrlParser: true
+  useNewUrlParser: true,
 });
 
 // Start the API server
-app.listen(PORT, function() {
+app.listen(PORT, function () {
   console.log(`🌎  ==> API Server now listening on PORT ${PORT}!`);
 });
