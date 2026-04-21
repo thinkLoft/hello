@@ -1,0 +1,110 @@
+.navbar {
+  background: var(--color-primary);
+  color: #fff;
+  box-shadow: var(--shadow-md);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.navbar__inner {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.navbar__brand {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 0;
+}
+
+.navbar__logo {
+  font-size: 1.75rem;
+}
+
+.navbar__name {
+  display: block;
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.navbar__tagline {
+  display: block;
+  font-size: 0.7rem;
+  opacity: 0.75;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.navbar__count {
+  background: rgba(255 255 255 / 0.15);
+  border-radius: 100px;
+  padding: 0.2rem 0.7rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-left: 0.5rem;
+}
+
+.navbar__tabs {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.navbar__tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.85rem 1.1rem;
+  border-radius: var(--radius) var(--radius) 0 0;
+  color: rgba(255 255 255 / 0.75);
+  transition: background 0.15s, color 0.15s;
+  line-height: 1.2;
+  min-width: 80px;
+}
+
+.navbar__tab:hover {
+  background: rgba(255 255 255 / 0.1);
+  color: #fff;
+}
+
+.navbar__tab--active {
+  background: var(--color-bg);
+  color: var(--color-primary);
+}
+
+.navbar__tab-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.navbar__tab-sub {
+  font-size: 0.65rem;
+  opacity: 0.7;
+}
+
+.navbar__tab--active .navbar__tab-sub {
+  opacity: 0.6;
+}
+
+@media (max-width: 600px) {
+  .navbar__inner {
+    flex-direction: column;
+    padding: 0.75rem 1rem;
+  }
+  .navbar__tab {
+    padding: 0.6rem 0.75rem;
+    min-width: 68px;
+  }
+  .navbar__tab-label {
+    font-size: 0.78rem;
+  }
+}

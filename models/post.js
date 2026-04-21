@@ -1,98 +1,34 @@
-const mongoose = require("mongoose");
-mongoose.set("useFindAndModify", false);
-const Schema = mongoose.Schema;
+const mongoose = require('mongoose');
+const { Schema } = mongoose;
 
-var postSchema = new Schema({
-  srcURL: {
-    type: String,
-    required: true
+const postSchema = new Schema(
+  {
+    srcURL: { type: String, required: true },
+    postTitle: { type: String },
+    description: { type: String },
+    imgs: { type: [String], default: [] },
+    price: { type: Number },
+    contactNumber: { type: String },
+    year: { type: Number },
+    make: { type: String },
+    model: { type: String },
+    trim: { type: String },
+    parish: { type: String },
+    scraped: { type: Boolean },
+    posted: { type: Boolean },
+    bodyType: { type: String },
+    driverSide: { type: String },
+    driveType: { type: String },
+    transmission: { type: String },
+    fuelType: { type: String },
+    engineSize: { type: String },
+    mileage: { type: String },
+    date: { type: String },
+    user: { type: String },
   },
-  postTitle: {
-    type: String,
-    required: false
-  },
-  description: {
-    type: String,
-    required: false
-  },
-  imgs: {
-    type: Array,
-    required: false
-  },
-  price: {
-    type: Number,
-    required: false
-  },
-  contactNumber: {
-    type: Number,
-    required: false
-  },
-  year: {
-    type: Number,
-    required: false
-  },
-  make: {
-    type: String,
-    require: false
-  },
-  model: {
-    type: String,
-    require: false
-  },
-  trim: {
-    type: String,
-    require: false
-  },
-  parish: {
-    type: String,
-    require: false
-  },
-  scraped: {
-    type: Boolean,
-    require: false
-  },
-  posted: {
-    type: Boolean,
-    require: false
-  },
-  bodyType: {
-    type: String,
-    require: false
-  },
-  driverSide: {
-    type: String,
-    require: false
-  },
-  driveType: {
-    type: String,
-    require: false
-  },
-  transmission: {
-    type: String,
-    require: false
-  },
-  fuelType: {
-    type: String,
-    require: false
-  },
-  engineSize: {
-    type: String,
-    require: false
-  },
-  mileage: {
-    type: String,
-    require: false
-  },
-  date: {
-    type: String,
-    require: false
-  },
-  user: {
-    type: String,
-    require: false
-  }
-});
+  { timestamps: true }
+);
 
-const Post = mongoose.model("Post", postSchema);
+const Post = mongoose.model('Post', postSchema);
 
 module.exports = Post;

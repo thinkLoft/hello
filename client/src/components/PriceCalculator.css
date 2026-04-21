@@ -1,0 +1,219 @@
+.calculator {
+  min-height: 60vh;
+  padding: 2rem 1.5rem;
+}
+
+.calculator__inner {
+  max-width: 740px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.calculator__hero {
+  text-align: center;
+}
+
+.calculator__title {
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: var(--color-text);
+  margin-bottom: 0.5rem;
+}
+
+.calculator__subtitle {
+  color: var(--color-text-secondary);
+  font-size: 0.95rem;
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.calculator__form {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  box-shadow: var(--shadow);
+}
+
+.calculator__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.calculator__label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.calculator__input {
+  padding: 0.6rem 0.85rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  font-size: 0.925rem;
+  background: var(--color-bg);
+  color: var(--color-text);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.calculator__input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgb(0 95 31 / 0.1);
+}
+
+.calculator__submit {
+  grid-column: 1 / -1;
+  padding: 0.75rem;
+  background: var(--color-primary);
+  color: #fff;
+  border-radius: var(--radius);
+  font-size: 0.95rem;
+  font-weight: 700;
+  transition: background 0.15s;
+  letter-spacing: 0.01em;
+}
+
+.calculator__submit:hover:not(:disabled) {
+  background: var(--color-primary-hover);
+}
+
+.calculator__submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.calculator__error,
+.calculator__empty {
+  padding: 1rem 1.25rem;
+  border-radius: var(--radius);
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.calculator__error {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.calculator__empty {
+  background: #fef9c3;
+  color: #854d0e;
+  border: 1px solid #fde68a;
+}
+
+.calculator__results {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-md);
+}
+
+.calculator__results-header {
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.calculator__results-header h3 {
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.calculator__results-count {
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+}
+
+.calculator__bands {
+  display: flex;
+  flex-direction: column;
+}
+
+.calculator__band {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--color-border);
+  transition: background 0.1s;
+}
+
+.calculator__band:last-child {
+  border-bottom: none;
+}
+
+.calculator__band:hover {
+  background: var(--color-bg);
+}
+
+.calculator__band--highlight {
+  background: #f0fdf4;
+  border-left: 3px solid var(--color-primary);
+}
+
+.calculator__band-emoji {
+  font-size: 1.25rem;
+  width: 2rem;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.calculator__band-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.calculator__band-label {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--band-color, var(--color-text));
+}
+
+.calculator__band-desc {
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+}
+
+.calculator__band-value {
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--band-color, var(--color-text));
+  white-space: nowrap;
+}
+
+.calculator__disclaimer {
+  padding: 0.85rem 1.5rem;
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+  background: var(--color-bg);
+  border-top: 1px solid var(--color-border);
+}
+
+@media (max-width: 600px) {
+  .calculator__form {
+    grid-template-columns: 1fr;
+  }
+  .calculator__band {
+    padding: 0.85rem 1rem;
+    gap: 0.75rem;
+  }
+  .calculator__band-value {
+    font-size: 0.875rem;
+  }
+}

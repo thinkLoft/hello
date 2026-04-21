@@ -1,82 +1,34 @@
-const mongoose = require("mongoose");
-mongoose.set("useFindAndModify", false);
-const Schema = mongoose.Schema;
+const mongoose = require('mongoose');
+const { Schema } = mongoose;
 
-var carSchema = new Schema({
-  url: {
-    type: String,
-    required: true
+const carSchema = new Schema(
+  {
+    url: { type: String, required: true, unique: true },
+    title: { type: String },
+    description: { type: String },
+    imgs: { type: [String], default: [] },
+    price: { type: Number },
+    contactNumber: { type: String },
+    year: { type: Number },
+    make: { type: String },
+    model: { type: String },
+    parish: { type: String },
+    posted: { type: Boolean, default: false },
+    bodyType: { type: String },
+    driverSide: { type: String },
+    transmission: { type: String },
+    mileage: { type: String },
+    date: { type: String },
+    user: { type: String },
+    comments: { type: String },
   },
-  title: {
-    type: String,
-    required: false
-  },
-  description: {
-    type: String,
-    required: false
-  },
-  imgs: {
-    type: Array,
-    required: false
-  },
-  price: {
-    type: Number,
-    required: false
-  },
-  contactNumber: {
-    type: Number,
-    required: false
-  },
-  year: {
-    type: Number,
-    required: false
-  },
-  make: {
-    type: String,
-    require: false
-  },
-  model: {
-    type: String,
-    require: false
-  },
-  parish: {
-    type: String,
-    require: false
-  },
-  posted: {
-    type: Boolean,
-    require: false
-  },
-  bodyType: {
-    type: String,
-    require: false
-  },
-  driverSide: {
-    type: String,
-    require: false
-  },
-  transmission: {
-    type: String,
-    require: false
-  },
-  mileage: {
-    type: String,
-    require: false
-  },
-  date: {
-    type: String,
-    require: false
-  },
-  user: {
-    type: String,
-    require: false
-  },
-  comments: {
-    type: String,
-    require: false
-  }
-});
+  { timestamps: true }
+);
 
-const Cars = mongoose.model("Cars", carSchema);
+carSchema.index({ posted: 1, price: 1, year: 1 });
+carSchema.index({ make: 1, model: 1, year: 1 });
+carSchema.index({ url: 1 }, { unique: true });
+
+const Cars = mongoose.model('Cars', carSchema);
 
 module.exports = Cars;

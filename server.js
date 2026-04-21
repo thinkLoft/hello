@@ -1,40 +1,47 @@
-const express = require("express");
+require('dotenv').config();
+const express = require('express');
+const mongoose = require('mongoose');
+const morgan = require('morgan');
+const cors = require('cors');
+const path = require('path');
 
-const mongoose = require("mongoose");
-const CronJob = require("cron").CronJob;
+const carRoutes = require('./routes/cars');
 
-var logger = require("morgan");
-const fs = require("fs");
-const request = require("request");
 const app = express();
 const PORT = process.env.PORT || 3001;
-require("dotenv").config();
 
-// define Routes
-const routes = require("./routes");
-const apiRoutes = require("./routes/apiRoutes");
-
-// Define middleware here
+app.use(morgan('dev'));
+app.use(cors());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
-// Serve up static assets (usually on heroku)
-if (process.env.NODE_ENV === "production") {
-  app.use(express.static("client/build"));
+
+if (process.env.NODE_ENV === 'production') {
+  app.use(express.static(path.join(__dirname, 'client/dist')));
 }
 
-// Add routes, both API and view
-app.use("/api", apiRoutes);
-app.use(routes);
+app.use('/api', carRoutes);
 
-// Use morgan logger for logging requests
-app.use(logger("dev"));
+if (process.env.NODE_ENV === 'production') {
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'client/dist/index.html'));
+  });
+}
 
-// Connect to the Mongo DB
-mongoose.connect(process.env.MONGODB_URI || "mongodb://localhost/helloV1", {
-  useNewUrlParser: true,
-});
+async function start() {
+  try {
+    await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost/helloV1');
+    console.log('MongoDB connected');
 
-// Start the API server
-app.listen(PORT, function () {
-  console.log(`🌎  ==> API Server now listening on PORT ${PORT}!`);
-});
+    const { loadMakeDb } = require('./services/validator');
+    await loadMakeDb();
+
+    require('./jobs/scrapeJob');
+
+    app.listen(PORT, () => console.log(`API Server listening on PORT ${PORT}`));
+  } catch (err) {
+    console.error('Failed to start server:', err.message);
+    process.exit(1);
+  }
+}
+
+start();

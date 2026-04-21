@@ -1,0 +1,57 @@
+import React, { useState } from 'react';
+import './CarCard.css';
+
+const formatPrice = (price) =>
+  new Intl.NumberFormat('en-JM', {
+    style: 'currency',
+    currency: 'JMD',
+    maximumFractionDigits: 0,
+  }).format(price);
+
+export default function CarCard({ car, onClick }) {
+  const [imgError, setImgError] = useState(false);
+  const hasImage = !imgError && car.imgs?.[0];
+
+  return (
+    <article className="car-card" onClick={() => onClick(car)}>
+      <div className="car-card__image-wrap">
+        {hasImage ? (
+          <img
+            className="car-card__image"
+            src={car.imgs[0]}
+            alt={`${car.year} ${car.make} ${car.model}`}
+            loading="lazy"
+            onError={() => setImgError(true)}
+          />
+        ) : (
+          <div className="car-card__no-image">
+            <span>🚗</span>
+            <span>No image</span>
+          </div>
+        )}
+        {car.imgs?.length > 1 && (
+          <span className="car-card__img-count">+{car.imgs.length - 1} photos</span>
+        )}
+        <span className="car-card__source">{car.user}</span>
+      </div>
+
+      <div className="car-card__body">
+        <h3 className="car-card__title">
+          {car.year} {car.make} {car.model}
+        </h3>
+        <p className="car-card__price">{formatPrice(car.price)}</p>
+        {car.parish && (
+          <p className="car-card__location">
+            <span className="car-card__location-icon">📍</span>
+            {car.parish}
+          </p>
+        )}
+        <div className="car-card__tags">
+          {car.bodyType && <span className="tag">{car.bodyType}</span>}
+          {car.transmission && <span className="tag tag--alt">{car.transmission}</span>}
+          {car.driverSide === 'Right Hand Drive' && <span className="tag tag--rhd">RHD</span>}
+        </div>
+      </div>
+    </article>
+  );
+}
