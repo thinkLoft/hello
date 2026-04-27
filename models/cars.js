@@ -27,7 +27,6 @@ const carSchema = new Schema(
 
 carSchema.index({ posted: 1, price: 1, year: 1 });
 carSchema.index({ make: 1, model: 1, year: 1 });
-carSchema.index({ url: 1 }, { unique: true });
 
 const Cars = mongoose.model('Cars', carSchema);
 
