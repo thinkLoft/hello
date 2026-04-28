@@ -4,18 +4,9 @@ const fs = require('fs');
 const path = require('path');
 const db = require('../models');
 const { priceCheck } = require('../services/priceAnalysis');
+const { requireAdmin } = require('../middleware/auth');
 
 const currentYear = new Date().getFullYear();
-
-// Auth gate for write operations.
-// TODO: replace with real session/JWT check when user auth is added.
-// Set ADMIN_KEY in .env to enable enforcement; unset = open (dev only).
-function requireAdmin(req, res, next) {
-  const key = process.env.ADMIN_KEY;
-  if (!key) return next();
-  if (req.headers['x-admin-key'] === key) return next();
-  return res.status(401).json({ error: 'Unauthorized' });
-}
 
 const CSV_FIELDS = [
   'url', 'posted', 'user', 'year', 'make', 'model', 'price',

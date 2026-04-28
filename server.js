@@ -1,19 +1,40 @@
 require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
+const session = require('express-session');
+const MongoStore = require('connect-mongo');
 const morgan = require('morgan');
 const cors = require('cors');
 const path = require('path');
 
 const carRoutes = require('./routes/cars');
+const authRoutes = require('./routes/auth');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
 app.use(morgan('dev'));
-app.use(cors());
+app.use(cors({ credentials: true, origin: process.env.NODE_ENV === 'production' ? false : true }));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
+
+app.use(
+  session({
+    secret: process.env.SESSION_SECRET || 'dev-secret-change-in-prod',
+    store: new MongoStore({
+      mongoUrl: process.env.MONGODB_URI || 'mongodb://localhost/helloV1',
+      touchAfter: 24 * 3600,
+    }),
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: 24 * 60 * 60 * 1000,
+      sameSite: 'strict',
+    },
+  })
+);
 
 // Serve built frontend — works both locally (client/dist) and on server (public/)
 const frontendDist = process.env.NODE_ENV === 'production'
@@ -31,6 +52,7 @@ app.get('/health', (req, res) => {
   res.json({ ok: dbState === 1, db: states[dbState] ?? 'unknown', version: require('./package.json').version });
 });
 
+app.use('/api/auth', authRoutes);
 app.use('/api', carRoutes);
 
 if (process.env.NODE_ENV === 'production') {
