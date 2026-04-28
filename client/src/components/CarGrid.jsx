@@ -2,7 +2,7 @@ import React from 'react';
 import CarCard from './CarCard';
 import './CarGrid.css';
 
-export default function CarGrid({ cars, loading, error, onCarClick }) {
+export default function CarGrid({ cars, loading, error, onCarClick, emptyMessage }) {
   if (loading) {
     return (
       <div className="car-grid__state">
@@ -25,7 +25,7 @@ export default function CarGrid({ cars, loading, error, onCarClick }) {
     return (
       <div className="car-grid__state">
         <span>🔍</span>
-        <p>No listings match your filters.</p>
+        <p>{emptyMessage ?? 'No listings match your filters.'}</p>
       </div>
     );
   }

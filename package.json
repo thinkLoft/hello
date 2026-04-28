@@ -26,11 +26,11 @@
     "mongoose": "^8.5.0",
     "morgan": "^1.10.0",
     "nodemailer": "^8.0.7",
-    "puppeteer": "^22.15.0",
     "stats-lite": "^2.2.0"
   },
   "devDependencies": {
-    "nodemon": "^3.1.4"
+    "nodemon": "^3.1.4",
+    "puppeteer": "^22.15.0"
   },
   "repository": {
     "type": "git",

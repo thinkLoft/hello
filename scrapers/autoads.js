@@ -3,9 +3,11 @@ const cheerio = require('cheerio');
 const db = require('../models');
 const { nullCheck } = require('../services/validator');
 
+const HEADERS = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' };
+
 async function checker(siteUrl) {
   try {
-    const response = await axios.get(siteUrl);
+    const response = await axios.get(siteUrl, { headers: HEADERS });
     const $ = cheerio.load(response.data, { xmlMode: true });
     const urls = [];
     $('item').each((i, el) => urls.push($(el).children('link').text()));
@@ -20,31 +22,43 @@ async function checker(siteUrl) {
 
 async function scrape(link) {
   try {
-    const response = await axios.get(link);
+    const response = await axios.get(link, { headers: HEADERS });
     const $ = cheerio.load(response.data);
-    const title = $('.price-tag > h1').text();
-    const ymm = title.split(' ');
-    const listItems = $('.per-detail > ul > li');
 
-    const getText = (el, prefix) =>
-      el?.children[0]?.data?.replace(prefix, '').replace(/\s+/g, '').replace('.', '. ') ?? null;
+    // Title is the first text node in h1.mb-3; price is in the <b> inside the same h1
+    const h1 = $('h1.mb-3').first();
+    const titleText = h1.contents().filter((_, n) => n.type === 'text').first().text().trim();
+    const ymm = titleText.split(/\s+/);
+    const price = h1.find('b').first().text().replace(/[^0-9]/g, '');
 
+    // Specs: each .list-group-item has a .fw-bold label and .me-auto value
+    const specs = {};
+    $('.list-group-item').each((_, el) => {
+      const label = $(el).find('.fw-bold').text().trim().replace(/:$/, '').trim();
+      const value = $(el).find('.me-auto').text().trim();
+      if (label && value) specs[label] = value;
+    });
+
+    // Images
     const imgs = [];
-    $('.gallery__thumbs > a').each((i, el) => imgs.push($(el).attr('href')));
+    $('.gallery__thumbs > a').each((_, el) => imgs.push($(el).attr('href')));
+
+    // Contact: href="tel:18761234567"
+    const contactNumber = $('.contact_details a[href^="tel:"]').attr('href')?.replace(/[^0-9]/g, '') ?? null;
 
     await nullCheck({
       user: 'autoadsja',
       url: response.config.url,
-      price: $('.price-tag > h2').text().replace(/[^0-9.-]+/g, ''),
+      price,
       year: ymm[0],
-      make: ymm[1]?.replace(/\-.*/g, '').trim(),
-      model: ymm[2]?.replace(/\-.*/g, '').trim(),
-      parish: getText(listItems[0], 'Location: '),
-      bodyType: getText(listItems[1], 'Body Type: '),
-      driverSide: getText(listItems[2], 'Driver Side: '),
-      transmission: getText(listItems[4], 'Transmission: '),
-      mileage: getText(listItems[7], 'Mileage: '),
-      contactNumber: $('.contact_details > a').attr('href')?.replace(/[^0-9]+/g, ''),
+      make: ymm[1],
+      model: ymm.slice(2).join(' ') || null,
+      parish: specs['Location'] ?? null,
+      bodyType: specs['Body Type'] ?? null,
+      driverSide: specs['Driver Side'] ?? null,
+      transmission: specs['Transmission'] ?? null,
+      mileage: specs['Mileage'] ?? null,
+      contactNumber,
       imgs,
     });
   } catch (err) {
