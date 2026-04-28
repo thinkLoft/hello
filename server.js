@@ -18,16 +18,8 @@ app.use(cors({ credentials: true, origin: process.env.NODE_ENV === 'production' 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
-let sessionStore;
-if (process.env.NODE_ENV === 'production') {
-  sessionStore = new MongoStore({
-    mongoUrl: process.env.MONGODB_URI,
-    touchAfter: 24 * 3600,
-  });
-} else {
-  const session_store = require('express-session').MemoryStore;
-  sessionStore = new session_store();
-}
+const SessionStore = require('express-session').MemoryStore;
+const sessionStore = new SessionStore();
 
 app.use(
   session({
