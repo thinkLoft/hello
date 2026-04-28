@@ -243,6 +243,15 @@
   background: #15803d;
 }
 
+.modal__btn--whatsapp {
+  background: #25d366;
+  color: #fff;
+}
+
+.modal__btn--whatsapp:hover {
+  background: #20ba5a;
+}
+
 .modal__btn--link {
   background: var(--color-primary);
   color: #fff;

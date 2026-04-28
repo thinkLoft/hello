@@ -130,12 +130,22 @@ export default function CarModal({ car, onClose, onSold }) {
             ) : (
               <>
                 {car.contactNumber && (
-                  <a
-                    className="modal__btn modal__btn--call"
-                    href={`tel:+${car.contactNumber}`}
-                  >
-                    📞 Call Seller
-                  </a>
+                  <>
+                    <a
+                      className="modal__btn modal__btn--call"
+                      href={`tel:+${car.contactNumber}`}
+                    >
+                      📞 Call Seller
+                    </a>
+                    <a
+                      className="modal__btn modal__btn--whatsapp"
+                      href={`https://wa.me/${car.contactNumber}?text=${encodeURIComponent(`Hi, I'm interested in the ${car.year} ${car.make} ${car.model}`)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      💬 WhatsApp
+                    </a>
+                  </>
                 )}
                 <a
                   className="modal__btn modal__btn--link"
