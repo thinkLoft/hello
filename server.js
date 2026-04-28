@@ -18,20 +18,28 @@ app.use(cors({ credentials: true, origin: process.env.NODE_ENV === 'production' 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
+let sessionStore;
+if (process.env.NODE_ENV === 'production') {
+  sessionStore = new MongoStore({
+    mongoUrl: process.env.MONGODB_URI,
+    touchAfter: 24 * 3600,
+  });
+} else {
+  const session_store = require('express-session').MemoryStore;
+  sessionStore = new session_store();
+}
+
 app.use(
   session({
     secret: process.env.SESSION_SECRET || 'dev-secret-change-in-prod',
-    store: new MongoStore({
-      mongoUrl: process.env.MONGODB_URI || 'mongodb://localhost/helloV1',
-      touchAfter: 24 * 3600,
-    }),
+    store: sessionStore,
     resave: false,
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       maxAge: 24 * 60 * 60 * 1000,
-      sameSite: 'strict',
+      sameSite: 'lax',
     },
   })
 );

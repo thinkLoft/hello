@@ -123,6 +123,51 @@
   transition: padding 0.2s, font-size 0.2s;
 }
 
+.navbar__auth {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+
+.navbar__login-link,
+.navbar__admin-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.5rem 0.9rem;
+  border-radius: var(--radius);
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-decoration: none;
+  color: rgba(255 255 255 / 0.75);
+  transition: background 0.15s, color 0.15s;
+}
+
+.navbar__login-link:hover,
+.navbar__admin-link:hover {
+  background: rgba(255 255 255 / 0.1);
+  color: #fff;
+}
+
+.navbar__logout-btn {
+  padding: 0.5rem 0.9rem;
+  border-radius: var(--radius);
+  border: 1px solid rgba(255 255 255 / 0.3);
+  background: transparent;
+  color: rgba(255 255 255 / 0.75);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.navbar__logout-btn:hover {
+  background: rgba(255 255 255 / 0.1);
+  border-color: rgba(255 255 255 / 0.5);
+  color: #fff;
+}
+
 @media (max-width: 600px) {
   .navbar__inner {
     flex-direction: column;
@@ -134,5 +179,15 @@
   }
   .navbar__tab-label {
     font-size: 0.78rem;
+  }
+  .navbar__auth {
+    margin-left: 0;
+    gap: 0.35rem;
+  }
+  .navbar__login-link,
+  .navbar__admin-link,
+  .navbar__logout-btn {
+    font-size: 0.75rem;
+    padding: 0.4rem 0.6rem;
   }
 }
