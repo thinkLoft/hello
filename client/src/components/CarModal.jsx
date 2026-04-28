@@ -27,11 +27,18 @@ export default function CarModal({ car, onClose, onSold }) {
   const [activeImg, setActiveImg] = useState(0);
   const [soldConfirm, setSoldConfirm] = useState(false);
   const [soldLoading, setSoldLoading] = useState(false);
+  const [isSold, setIsSold] = useState(false);
 
   const handleSoldClick = async () => {
     if (!soldConfirm) { setSoldConfirm(true); return; }
     setSoldLoading(true);
-    try { await onSold(car); } finally { setSoldLoading(false); }
+    try {
+      await onSold(car);
+      setIsSold(true);
+      setTimeout(onClose, 1800);
+    } catch {
+      setSoldLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -118,29 +125,35 @@ export default function CarModal({ car, onClose, onSold }) {
           )}
 
           <div className="modal__actions">
-            {car.contactNumber && (
-              <a
-                className="modal__btn modal__btn--call"
-                href={`tel:+${car.contactNumber}`}
-              >
-                📞 Call Seller
-              </a>
+            {isSold ? (
+              <div className="modal__sold-banner">✓ Marked as Sold</div>
+            ) : (
+              <>
+                {car.contactNumber && (
+                  <a
+                    className="modal__btn modal__btn--call"
+                    href={`tel:+${car.contactNumber}`}
+                  >
+                    📞 Call Seller
+                  </a>
+                )}
+                <a
+                  className="modal__btn modal__btn--link"
+                  href={car.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  View Listing ↗
+                </a>
+                <button
+                  className={`modal__btn modal__btn--sold${soldConfirm ? ' modal__btn--confirm' : ''}`}
+                  onClick={handleSoldClick}
+                  disabled={soldLoading}
+                >
+                  {soldLoading ? 'Marking…' : soldConfirm ? 'Confirm Sold?' : 'Mark as Sold'}
+                </button>
+              </>
             )}
-            <a
-              className="modal__btn modal__btn--link"
-              href={car.url}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              View Listing ↗
-            </a>
-            <button
-              className={`modal__btn modal__btn--sold${soldConfirm ? ' modal__btn--confirm' : ''}`}
-              onClick={handleSoldClick}
-              disabled={soldLoading}
-            >
-              {soldLoading ? 'Marking…' : soldConfirm ? 'Confirm Sold?' : 'Mark as Sold'}
-            </button>
           </div>
         </div>
       </div>

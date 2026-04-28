@@ -278,6 +278,16 @@
   cursor: not-allowed;
 }
 
+.modal__sold-banner {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #16a34a;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: var(--radius);
+  padding: 0.65rem 1.5rem;
+}
+
 @media (max-width: 600px) {
   .modal__title { font-size: 1.1rem; }
   .modal__price { font-size: 1.2rem; }

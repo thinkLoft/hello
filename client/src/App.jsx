@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import Navbar from './components/Navbar';
 import Filters from './components/Filters';
 import CarGrid from './components/CarGrid';
@@ -14,6 +14,7 @@ const FETCHERS = {
 };
 
 const EMPTY_FILTERS = { make: '', bodyType: '', transmission: '', parish: '', search: '' };
+const PAGE_SIZE = 24;
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('forsale');
@@ -23,6 +24,8 @@ export default function App() {
   const [filters, setFilters] = useState(EMPTY_FILTERS);
   const [selectedCar, setSelectedCar] = useState(null);
   const [totalCount, setTotalCount] = useState(0);
+  const [soldIds, setSoldIds] = useState(new Set());
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
   useEffect(() => {
     fetchCount()
@@ -39,6 +42,7 @@ export default function App() {
     setError(null);
     setAllCars([]);
     setFilters(EMPTY_FILTERS);
+    setVisibleCount(PAGE_SIZE);
 
     fetcher()
       .then(setAllCars)
@@ -61,16 +65,33 @@ export default function App() {
     });
   }, [allCars, filters]);
 
+  const visibleCars = useMemo(() => filteredCars.slice(0, visibleCount), [filteredCars, visibleCount]);
+  const hasMore = visibleCount < filteredCars.length;
+
   const handleTabChange = (tab) => {
     setActiveTab(tab);
     setSelectedCar(null);
   };
 
+  const handleFilterChange = (newFilters) => {
+    setFilters(newFilters);
+    setVisibleCount(PAGE_SIZE);
+  };
+
   const handleSold = async (car) => {
     await markAsSold(car._id);
-    setAllCars((prev) => prev.filter((c) => c._id !== car._id));
+    setSoldIds((prev) => new Set([...prev, car._id]));
+  };
+
+  const handleModalClose = () => {
+    if (selectedCar && soldIds.has(selectedCar._id)) {
+      setAllCars((prev) => prev.filter((c) => c._id !== selectedCar._id));
+      setSoldIds((prev) => { const s = new Set(prev); s.delete(selectedCar._id); return s; });
+    }
     setSelectedCar(null);
   };
+
+  const handleLoadMore = useCallback(() => setVisibleCount((n) => n + PAGE_SIZE), []);
 
   const isListing = activeTab !== 'calculator';
 
@@ -82,7 +103,7 @@ export default function App() {
         <Filters
           cars={allCars}
           filters={filters}
-          onFilterChange={setFilters}
+          onFilterChange={handleFilterChange}
           resultCount={filteredCars.length}
         />
       )}
@@ -92,10 +113,13 @@ export default function App() {
           <PriceCalculator />
         ) : (
           <CarGrid
-            cars={filteredCars}
+            cars={visibleCars}
             loading={loading}
             error={error}
             onCarClick={setSelectedCar}
+            soldIds={soldIds}
+            hasMore={hasMore}
+            onLoadMore={handleLoadMore}
             emptyMessage={
               allCars.length === 0
                 ? 'No listings yet — scrapers are still populating the database.'
@@ -106,7 +130,7 @@ export default function App() {
       </main>
 
       {selectedCar && (
-        <CarModal car={selectedCar} onClose={() => setSelectedCar(null)} onSold={handleSold} />
+        <CarModal car={selectedCar} onClose={handleModalClose} onSold={handleSold} />
       )}
     </div>
   );

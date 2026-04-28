@@ -8,12 +8,12 @@ const formatPrice = (price) =>
     maximumFractionDigits: 0,
   }).format(price);
 
-export default function CarCard({ car, onClick }) {
+export default function CarCard({ car, onClick, sold }) {
   const [imgError, setImgError] = useState(false);
   const hasImage = !imgError && car.imgs?.[0];
 
   return (
-    <article className="car-card" onClick={() => onClick(car)}>
+    <article className={`car-card${sold ? ' car-card--sold' : ''}`} onClick={() => onClick(car)}>
       <div className="car-card__image-wrap">
         {hasImage ? (
           <img
@@ -33,6 +33,11 @@ export default function CarCard({ car, onClick }) {
           <span className="car-card__img-count">+{car.imgs.length - 1} photos</span>
         )}
         <span className="car-card__source">{car.user}</span>
+        {sold && (
+          <div className="car-card__sold-overlay">
+            <span>SOLD</span>
+          </div>
+        )}
       </div>
 
       <div className="car-card__body">

@@ -5,6 +5,7 @@
   position: sticky;
   top: 0;
   z-index: 100;
+  transition: box-shadow 0.2s;
 }
 
 .navbar__inner {
@@ -93,6 +94,33 @@
 
 .navbar__tab--active .navbar__tab-sub {
   opacity: 0.6;
+}
+
+.navbar--compact {
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.2);
+}
+
+.navbar--compact .navbar__brand {
+  padding: 0.45rem 0;
+}
+
+.navbar--compact .navbar__logo {
+  font-size: 1.2rem;
+}
+
+.navbar--compact .navbar__tagline {
+  display: none;
+}
+
+.navbar--compact .navbar__tab {
+  padding: 0.55rem 0.9rem;
+}
+
+.navbar__brand,
+.navbar__logo,
+.navbar__tagline,
+.navbar__tab {
+  transition: padding 0.2s, font-size 0.2s;
 }
 
 @media (max-width: 600px) {

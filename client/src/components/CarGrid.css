@@ -47,3 +47,8 @@
     grid-template-columns: 1fr;
   }
 }
+
+.car-grid__sentinel {
+  grid-column: 1 / -1;
+  height: 1px;
+}

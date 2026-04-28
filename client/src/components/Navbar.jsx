@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import './Navbar.css';
 
 const TABS = [
@@ -9,8 +9,16 @@ const TABS = [
 ];
 
 export default function Navbar({ activeTab, onTabChange, count }) {
+  const [compact, setCompact] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setCompact(window.scrollY > 60);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
   return (
-    <header className="navbar">
+    <header className={`navbar${compact ? ' navbar--compact' : ''}`}>
       <div className="navbar__inner">
         <div className="navbar__brand">
           <span className="navbar__logo">🚗</span>

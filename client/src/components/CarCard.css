@@ -135,3 +135,27 @@
   background: #fef9c3;
   color: #854d0e;
 }
+
+.car-card--sold {
+  opacity: 0.72;
+}
+
+.car-card__sold-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgb(0 0 0 / 0.4);
+}
+
+.car-card__sold-overlay span {
+  font-size: 1.75rem;
+  font-weight: 900;
+  color: #fff;
+  letter-spacing: 0.15em;
+  padding: 0.35rem 1.1rem;
+  border: 3px solid rgba(255 255 255 / 0.9);
+  border-radius: 4px;
+  transform: rotate(-15deg);
+}
