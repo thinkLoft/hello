@@ -13,7 +13,7 @@ const FETCHERS = {
   classics: fetchLatest,
 };
 
-const EMPTY_FILTERS = { make: '', bodyType: '', transmission: '', parish: '', search: '' };
+const EMPTY_FILTERS = { make: '', bodyType: '', transmission: '', parish: '', search: '', sort: '' };
 const PAGE_SIZE = 24;
 
 export default function App() {
@@ -51,7 +51,7 @@ export default function App() {
   }, [activeTab]);
 
   const filteredCars = useMemo(() => {
-    return allCars.filter((car) => {
+    let result = allCars.filter((car) => {
       if (filters.make && car.make !== filters.make) return false;
       if (filters.bodyType && car.bodyType !== filters.bodyType) return false;
       if (filters.transmission && car.transmission !== filters.transmission) return false;
@@ -63,6 +63,27 @@ export default function App() {
       }
       return true;
     });
+
+    if (filters.sort) {
+      switch (filters.sort) {
+        case 'price-low':
+          result.sort((a, b) => (a.price ?? 0) - (b.price ?? 0));
+          break;
+        case 'price-high':
+          result.sort((a, b) => (b.price ?? 0) - (a.price ?? 0));
+          break;
+        case 'year-new':
+          result.sort((a, b) => (b.year ?? 0) - (a.year ?? 0));
+          break;
+        case 'date-latest':
+          result.sort((a, b) => new Date(b.date ?? 0) - new Date(a.date ?? 0));
+          break;
+        default:
+          break;
+      }
+    }
+
+    return result;
   }, [allCars, filters]);
 
   const visibleCars = useMemo(() => filteredCars.slice(0, visibleCount), [filteredCars, visibleCount]);

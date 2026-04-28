@@ -1,6 +1,14 @@
 import React from 'react';
 import './Filters.css';
 
+const SORT_OPTIONS = [
+  { value: '', label: 'Default' },
+  { value: 'price-low', label: 'Price: Low to High' },
+  { value: 'price-high', label: 'Price: High to Low' },
+  { value: 'year-new', label: 'Year: Newest' },
+  { value: 'date-latest', label: 'Date: Latest' },
+];
+
 export default function Filters({ cars, filters, onFilterChange, resultCount }) {
   const unique = (key) =>
     [...new Set(cars.map((c) => c[key]).filter(Boolean))].sort();
@@ -11,8 +19,8 @@ export default function Filters({ cars, filters, onFilterChange, resultCount }) 
   const parishes = unique('parish');
 
   const handleChange = (key) => (e) => onFilterChange({ ...filters, [key]: e.target.value });
-  const clearAll = () => onFilterChange({ make: '', bodyType: '', transmission: '', parish: '', search: '' });
-  const hasFilters = Object.values(filters).some(Boolean);
+  const clearAll = () => onFilterChange({ make: '', bodyType: '', transmission: '', parish: '', search: '', sort: '' });
+  const hasFilters = Object.values(filters).some((v) => v && v !== '');
 
   return (
     <div className="filters">
@@ -46,6 +54,10 @@ export default function Filters({ cars, filters, onFilterChange, resultCount }) 
         <select className="filters__select" value={filters.parish} onChange={handleChange('parish')}>
           <option value="">All Parishes</option>
           {parishes.map((p) => <option key={p} value={p}>{p}</option>)}
+        </select>
+
+        <select className="filters__select" value={filters.sort ?? ''} onChange={handleChange('sort')}>
+          {SORT_OPTIONS.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
         </select>
 
         {hasFilters && (
