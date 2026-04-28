@@ -7,6 +7,16 @@ const { priceCheck } = require('../services/priceAnalysis');
 
 const currentYear = new Date().getFullYear();
 
+// Auth gate for write operations.
+// TODO: replace with real session/JWT check when user auth is added.
+// Set ADMIN_KEY in .env to enable enforcement; unset = open (dev only).
+function requireAdmin(req, res, next) {
+  const key = process.env.ADMIN_KEY;
+  if (!key) return next();
+  if (req.headers['x-admin-key'] === key) return next();
+  return res.status(401).json({ error: 'Unauthorized' });
+}
+
 const CSV_FIELDS = [
   'url', 'posted', 'user', 'year', 'make', 'model', 'price',
   'date', 'parish', 'bodyType', 'transmission', 'driverSide',
@@ -97,7 +107,7 @@ router.get('/data/:yearUpper/:yearLower/:make/:model', async (req, res) => {
   }
 });
 
-router.patch('/cars/:id', async (req, res) => {
+router.patch('/cars/:id', requireAdmin, async (req, res) => {
   try {
     await db.Cars.findByIdAndUpdate(req.params.id, { sold: true, posted: false });
     res.json({ ok: true });
