@@ -14,6 +14,7 @@ const carSchema = new Schema(
     model: { type: String },
     parish: { type: String },
     posted: { type: Boolean, default: false },
+    sold: { type: Boolean, default: false },
     bodyType: { type: String },
     driverSide: { type: String },
     transmission: { type: String },

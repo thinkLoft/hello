@@ -4,7 +4,7 @@ import Filters from './components/Filters';
 import CarGrid from './components/CarGrid';
 import CarModal from './components/CarModal';
 import PriceCalculator from './components/PriceCalculator';
-import { fetchCarsForSale, fetchUnderMil, fetchLatest, fetchCount } from './services/api';
+import { fetchCarsForSale, fetchUnderMil, fetchLatest, fetchCount, markAsSold } from './services/api';
 import './App.css';
 
 const FETCHERS = {
@@ -66,6 +66,12 @@ export default function App() {
     setSelectedCar(null);
   };
 
+  const handleSold = async (car) => {
+    await markAsSold(car._id);
+    setAllCars((prev) => prev.filter((c) => c._id !== car._id));
+    setSelectedCar(null);
+  };
+
   const isListing = activeTab !== 'calculator';
 
   return (
@@ -90,12 +96,17 @@ export default function App() {
             loading={loading}
             error={error}
             onCarClick={setSelectedCar}
+            emptyMessage={
+              allCars.length === 0
+                ? 'No listings yet — scrapers are still populating the database.'
+                : 'No listings match your filters.'
+            }
           />
         )}
       </main>
 
       {selectedCar && (
-        <CarModal car={selectedCar} onClose={() => setSelectedCar(null)} />
+        <CarModal car={selectedCar} onClose={() => setSelectedCar(null)} onSold={handleSold} />
       )}
     </div>
   );

@@ -97,4 +97,13 @@ router.get('/data/:yearUpper/:yearLower/:make/:model', async (req, res) => {
   }
 });
 
+router.patch('/cars/:id', async (req, res) => {
+  try {
+    await db.Cars.findByIdAndUpdate(req.params.id, { sold: true, posted: false });
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

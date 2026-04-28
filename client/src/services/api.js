@@ -12,3 +12,7 @@ export const fetchLatest = () => apiFetch('/latest');
 export const fetchCount = () => apiFetch('/count');
 export const fetchPriceData = (yearUpper, yearLower, make, model) =>
   apiFetch(`/data/${yearUpper}/${yearLower}/${encodeURIComponent(make)}/${encodeURIComponent(model)}`);
+
+export const markAsSold = (id) =>
+  fetch(`${BASE}/cars/${id}`, { method: 'PATCH' })
+    .then((res) => { if (!res.ok) throw new Error(`API error ${res.status}`); return res.json(); });

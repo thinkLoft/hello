@@ -15,13 +15,18 @@ const ATTR_MAP = {
   Mileage: 'mileage',
 };
 
-async function scrape(pageUrl) {
+// Discovery: sitemap-advert.xml lists all ads with lastmod dates — filter to last 24 h for new listings.
+// Detail pages are Cloudflare-protected (same as JCO); needs Puppeteer before this can run.
+async function scrape() {
   try {
-    const response = await axios.get(pageUrl);
-    const $ = cheerio.load(response.data);
+    const response = await axios.get('https://www.jacars.net/sitemap-advert.xml');
+    const $ = cheerio.load(response.data, { xmlMode: true });
+    const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
     const links = [];
-    $('.announcement-block__title').each((i, el) => {
-      links.push('https://www.jacars.net' + $(el).attr('href'));
+    $('url').each((i, el) => {
+      const loc = $(el).children('loc').text();
+      const lastmod = $(el).children('lastmod').text();
+      if (loc.includes('/adv/') && lastmod >= cutoff) links.push(loc);
     });
     for (const url of links) {
       const exists = await db.Cars.exists({ url });

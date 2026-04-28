@@ -211,21 +211,71 @@
   line-height: 1.7;
 }
 
-.modal__link {
-  display: inline-block;
+.modal__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.modal__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
   padding: 0.65rem 1.25rem;
-  background: var(--color-primary);
-  color: #fff;
   border-radius: var(--radius);
   font-size: 0.875rem;
   font-weight: 600;
   text-align: center;
-  transition: background 0.15s;
-  align-self: flex-start;
+  transition: background 0.15s, opacity 0.15s;
+  cursor: pointer;
+  border: none;
+  text-decoration: none;
 }
 
-.modal__link:hover {
+.modal__btn--call {
+  background: #16a34a;
+  color: #fff;
+}
+
+.modal__btn--call:hover {
+  background: #15803d;
+}
+
+.modal__btn--link {
+  background: var(--color-primary);
+  color: #fff;
+}
+
+.modal__btn--link:hover {
   background: var(--color-primary-hover);
+}
+
+.modal__btn--sold {
+  background: transparent;
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border);
+}
+
+.modal__btn--sold:hover {
+  border-color: #dc2626;
+  color: #dc2626;
+}
+
+.modal__btn--confirm {
+  background: #dc2626;
+  color: #fff;
+  border-color: #dc2626;
+}
+
+.modal__btn--confirm:hover {
+  background: #b91c1c;
+}
+
+.modal__btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 @media (max-width: 600px) {

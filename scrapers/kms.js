@@ -8,9 +8,8 @@ async function scrape(pageUrl) {
     const response = await axios.get(pageUrl);
     const $ = cheerio.load(response.data);
     const links = [];
-    $('div.blog-title > h2 > a').each((i, el) => {
-      const href = $(el).attr('href');
-      if (href?.includes('listing')) links.push(href);
+    $('a.inventory[href*="/listings/"]').each((i, el) => {
+      links.push($(el).attr('href'));
     });
     for (const url of links) {
       const exists = await db.Cars.exists({ url });
@@ -25,7 +24,7 @@ async function scrapeDetail(srcURL) {
   try {
     const response = await axios.get(srcURL);
     const $ = cheerio.load(response.data);
-    const titleParts = $('h2[itemprop="name"]').text().trim().split(' ');
+    const titleParts = $('h2[itemprop="name"]').text().trim().replace(/\s*\([^)]+\)\s*$/, '').split(' ');
 
     const imgs = [];
     $('ul.slides > li > img').each((i, el) => {
