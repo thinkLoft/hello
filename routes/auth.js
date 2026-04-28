@@ -72,6 +72,38 @@ router.get('/me', (req, res) => {
   res.json({ user: null });
 });
 
+router.patch(
+  '/password',
+  [
+    body('currentPassword').isLength({ min: 1 }),
+    body('newPassword').isLength({ min: 1 }),
+  ],
+  async (req, res) => {
+    if (!req.session?.user) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ error: 'Invalid input' });
+    }
+
+    try {
+      const user = await User.findById(req.session.user._id);
+      if (!user || !(await user.verifyPassword(req.body.currentPassword))) {
+        return res.status(401).json({ error: 'Current password is incorrect' });
+      }
+
+      user.passwordHash = await User.hashPassword(req.body.newPassword);
+      await user.save();
+      res.json({ success: true, message: 'Password updated' });
+    } catch (err) {
+      console.error('Password change error:', err);
+      res.status(500).json({ error: 'Server error' });
+    }
+  }
+);
+
 router.get('/csrf-token', (req, res) => {
   if (!req.session._csrf) {
     req.session._csrf = crypto.randomBytes(32).toString('hex');
