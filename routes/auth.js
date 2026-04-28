@@ -31,7 +31,6 @@ router.post(
   [
     body('email').isEmail().normalizeEmail(),
     body('password').isLength({ min: 1 }),
-    body('_csrf').trim(),
   ],
   async (req, res) => {
     const errors = validationResult(req);

@@ -27,7 +27,7 @@ export function AuthProvider({ children }) {
     const res = await fetch('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password, _csrf: '' }),
+      body: JSON.stringify({ email, password }),
       credentials: 'include',
     });
 
