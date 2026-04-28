@@ -1,9 +1,14 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import Navbar from './components/Navbar';
 import Filters from './components/Filters';
 import CarGrid from './components/CarGrid';
 import CarModal from './components/CarModal';
 import PriceCalculator from './components/PriceCalculator';
+import ProtectedRoute from './components/ProtectedRoute';
+import LoginPage from './pages/LoginPage';
+import AdminPage from './pages/AdminPage';
 import { fetchCarsForSale, fetchUnderMil, fetchLatest, fetchCount, markAsSold } from './services/api';
 import './App.css';
 
@@ -16,7 +21,7 @@ const FETCHERS = {
 const EMPTY_FILTERS = { make: '', bodyType: '', transmission: '', parish: '', search: '', sort: '' };
 const PAGE_SIZE = 24;
 
-export default function App() {
+function HomePage() {
   const [activeTab, setActiveTab] = useState('forsale');
   const [allCars, setAllCars] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -154,5 +159,20 @@ export default function App() {
         <CarModal car={selectedCar} onClose={handleModalClose} onSold={handleSold} />
       )}
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <Router>
+      <AuthProvider>
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/admin" element={<ProtectedRoute requiredRole="admin"><AdminPage /></ProtectedRoute>} />
+          <Route path="/" element={<HomePage />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </AuthProvider>
+    </Router>
   );
 }

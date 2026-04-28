@@ -1,7 +1,11 @@
 const BASE = '/api';
 
-async function apiFetch(path) {
-  const res = await fetch(`${BASE}${path}`);
+async function apiFetch(path, opts = {}) {
+  const res = await fetch(`${BASE}${path}`, { credentials: 'include', ...opts });
+  if (res.status === 401) {
+    window.location.href = '/login';
+    throw new Error('Unauthorized — redirecting to login');
+  }
   if (!res.ok) throw new Error(`API error ${res.status}`);
   return res.json();
 }
@@ -14,5 +18,4 @@ export const fetchPriceData = (yearUpper, yearLower, make, model) =>
   apiFetch(`/data/${yearUpper}/${yearLower}/${encodeURIComponent(make)}/${encodeURIComponent(model)}`);
 
 export const markAsSold = (id) =>
-  fetch(`${BASE}/cars/${id}`, { method: 'PATCH' })
-    .then((res) => { if (!res.ok) throw new Error(`API error ${res.status}`); return res.json(); });
+  apiFetch(`/cars/${id}`, { method: 'PATCH' });
