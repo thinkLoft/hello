@@ -47,10 +47,33 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 // Health endpoint — always responds even when DB is down
-app.get('/health', (req, res) => {
+app.get('/health', async (req, res) => {
   const dbState = mongoose.connection.readyState;
   const states = { 0: 'disconnected', 1: 'connected', 2: 'connecting', 3: 'disconnecting' };
-  res.json({ ok: dbState === 1, db: states[dbState] ?? 'unknown', version: require('./package.json').version });
+  const env = {
+    MONGODB_URI: !!process.env.MONGODB_URI,
+    SITE1: !!process.env.SITE1,
+    SITE4: !!process.env.SITE4,
+    SESSION_SECRET: !!process.env.SESSION_SECRET,
+    NODE_ENV: process.env.NODE_ENV ?? 'development',
+  };
+  let lastRuns = null;
+  if (dbState === 1) {
+    try {
+      lastRuns = await mongoose.connection.db
+        .collection('scraperstats')
+        .find({})
+        .sort({ lastRun: -1 })
+        .toArray();
+    } catch (_) {}
+  }
+  res.json({
+    ok: dbState === 1,
+    db: states[dbState] ?? 'unknown',
+    version: require('./package.json').version,
+    env,
+    lastRuns,
+  });
 });
 
 app.use('/api/auth', authRoutes);
@@ -76,7 +99,15 @@ async function connectDb() {
     const { loadMakeDb } = require('./services/validator');
     await loadMakeDb();
 
-    require('./jobs/scrapeJob');
+    const scraperJob = require('./jobs/scrapeJob');
+    // If no scraper has run in the last hour, fire immediately on startup
+    const recentRun = await mongoose.connection.db
+      .collection('scraperstats')
+      .findOne({ lastRun: { $gt: new Date(Date.now() - 60 * 60 * 1000) } });
+    if (!recentRun) {
+      console.log('No recent scraper run detected — triggering immediate startup run');
+      scraperJob.fireOnTick();
+    }
   } catch (err) {
     console.error('MongoDB connection failed:', err.message);
     // Retry after 30 s — do NOT exit; let Passenger keep the process alive

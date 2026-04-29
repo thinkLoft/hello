@@ -7,12 +7,12 @@ const HEADERS = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Apple
 
 async function checker(siteUrl) {
   const stats = { source: 'autoadsja', scraped: 0, saved: 0, skipped: 0, failed: 0, startedAt: new Date() };
+  const seenUrls = [];
   try {
-    const response = await axios.get(siteUrl, { headers: HEADERS });
+    const response = await axios.get(siteUrl, { headers: HEADERS, timeout: 15000 });
     const $ = cheerio.load(response.data, { xmlMode: true });
-    const urls = [];
-    $('item').each((i, el) => urls.push($(el).children('link').text()));
-    for (const url of urls) {
+    $('item').each((i, el) => seenUrls.push($(el).children('link').text()));
+    for (const url of seenUrls) {
       const existing = await db.Cars.findOne({ url }, { mileage: 1 }).lean();
       if (existing?.mileage) {
         stats.skipped++;
@@ -23,8 +23,14 @@ async function checker(siteUrl) {
         else stats.failed++;
       }
     }
+    if (seenUrls.length > 0) {
+      await db.Cars.updateMany(
+        { url: { $in: seenUrls } },
+        { $set: { lastSeenAt: new Date() } }
+      ).catch(() => {});
+    }
   } catch (err) {
-    console.error('AutoAds checker error:', err.message);
+    console.error(`AutoAds checker error (url: ${siteUrl}):`, err.message);
     stats.failed++;
   }
   return stats;
