@@ -17,7 +17,7 @@ async function scrape(pageUrl) {
   const stats = { source: 'jamaicaonlineclassifieds', scraped: 0, saved: 0, skipped: 0, failed: 0, startedAt: new Date() };
   const seenUrls = [];
   try {
-    const html = await fetchPage(pageUrl, { waitSelector: '.jco-card' });
+    const html = await fetchPage(pageUrl, { waitSelector: '.jco-card', timeout: 45000 });
     const $ = cheerio.load(html);
     $('.jco-card > a').each((i, el) => {
       const href = $(el).attr('href');
@@ -50,8 +50,20 @@ async function scrape(pageUrl) {
 }
 
 async function scrapeDetail(srcURL) {
+  let html;
   try {
-    const html = await fetchPage(srcURL, { waitSelector: 'li.collection-item' });
+    html = await fetchPage(srcURL, { waitSelector: 'li.collection-item', timeout: 30000 });
+  } catch (err) {
+    console.warn(`[jco] retrying ${srcURL} after: ${err.message}`);
+    await new Promise(r => setTimeout(r, 3000));
+    try {
+      html = await fetchPage(srcURL, { waitSelector: 'li.collection-item', timeout: 30000 });
+    } catch (err2) {
+      console.error('JCO detail error:', err2.message, srcURL);
+      return false;
+    }
+  }
+  try {
     const $ = cheerio.load(html);
     const attr = {};
 

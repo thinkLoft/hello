@@ -55,7 +55,7 @@ async function scrape() {
 
 async function scrapeDetail(srcURL) {
   try {
-    const html = await fetchPage(srcURL, { waitSelector: '#ad-title' });
+    const html = await fetchPage(srcURL, { waitSelector: '#ad-title', timeout: 30000 });
     const $ = cheerio.load(html);
     const titleParts = $('#ad-title').text().trim().split(' ');
     let price = Math.round(
@@ -75,6 +75,7 @@ async function scrapeDetail(srcURL) {
       const src = $(el).attr('src')?.trim();
       if (src && !imgs.includes(src)) imgs.push(src);
     });
+    if (imgs.length === 0) console.warn(`[jacars] no images found at ${srcURL}`);
 
     return await nullCheck({
       user: 'jacars',
