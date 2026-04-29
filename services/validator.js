@@ -188,10 +188,14 @@ async function nullCheck(x) {
 
 async function saveToDb(result) {
   try {
-    await db.Cars.create(result);
+    await db.Cars.findOneAndUpdate(
+      { url: result.url },
+      { $set: { ...result, lastSeenAt: new Date() } },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
     return true;
   } catch (err) {
-    if (err.code !== 11000) console.error('DB create error:', err.message);
+    console.error('DB upsert error:', err.message);
     return false;
   }
 }

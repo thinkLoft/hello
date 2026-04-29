@@ -37,6 +37,48 @@ function getPriceBand(price, stats, minCount = 2) {
   return 'high';
 }
 
+function buildScoreSummary(breakdown, flags, priceband, weights) {
+  const w = weights;
+  const parts = [];
+
+  if (flags.includes('PRICE_SUSPICIOUSLY_LOW')) {
+    parts.push('price suspiciously low — possible placeholder');
+  } else if (flags.includes('NO_PRICE_DATA')) {
+    parts.push('no market comparison available');
+  } else {
+    const pct = w.price > 0 ? breakdown.price / w.price : 0;
+    if (pct >= 1.0)       parts.push('great value vs market');
+    else if (pct >= 0.75) parts.push('below market average');
+    else if (pct >= 0.50) parts.push('near market average');
+    else if (pct >= 0.20) parts.push('above market average');
+    else                  parts.push('high price vs market');
+  }
+
+  if (flags.includes('MILEAGE_MISSING'))               parts.push('mileage not listed');
+  else if (flags.includes('MILEAGE_SUSPICIOUSLY_LOW')) parts.push('mileage unusually low');
+  else if (flags.includes('MILEAGE_HIGH'))             parts.push('high mileage');
+  else                                                  parts.push('normal mileage');
+
+  const compPct = w.completeness > 0 ? breakdown.completeness / w.completeness : 0;
+  if (compPct >= 0.9)      parts.push('complete data');
+  else if (compPct >= 0.5) parts.push('partial data');
+  else                     parts.push('sparse data');
+
+  const srcPct = w.source > 0 ? breakdown.source / w.source : 0;
+  if (srcPct >= 0.8)      parts.push('trusted source');
+  else if (srcPct >= 0.4) parts.push('moderate source');
+  else                    parts.push('low-credibility source');
+
+  const imgPct = w.images > 0 ? breakdown.images / w.images : 0;
+  if (imgPct >= 1.0)   parts.push('good photos');
+  else if (imgPct > 0) parts.push('few photos');
+  else                 parts.push('no photos');
+
+  if (!parts.length) return '';
+  parts[0] = parts[0][0].toUpperCase() + parts[0].slice(1);
+  return parts.join(' · ') + '.';
+}
+
 function scoreListing(doc, priceband, weights) {
   const w = weights;
   const flags = [];
@@ -94,7 +136,8 @@ function scoreListing(doc, priceband, weights) {
     breakdown.price + breakdown.completeness + breakdown.mileage + breakdown.source + breakdown.images
   ));
 
-  return { score, scoreBreakdown: breakdown, anomalyFlags: flags, priceband: priceband ?? null };
+  const scoreSummary = buildScoreSummary(breakdown, flags, priceband, w);
+  return { score, scoreBreakdown: breakdown, scoreSummary, anomalyFlags: flags, priceband: priceband ?? null };
 }
 
 async function runScoringBatch() {
@@ -135,6 +178,7 @@ async function runScoringBatch() {
               $set: {
                 score: result.score,
                 scoreBreakdown: result.scoreBreakdown,
+                scoreSummary: result.scoreSummary,
                 anomalyFlags: result.anomalyFlags,
                 priceband: result.priceband,
               },
@@ -148,9 +192,11 @@ async function runScoringBatch() {
       await db.Cars.bulkWrite(ops);
       console.log(`[Scoring] Scored ${ops.length} listings`);
     }
+    return ops.length;
   } catch (err) {
     console.error('[Scoring] Batch error:', err.message);
+    return 0;
   }
 }
 
-module.exports = { parseMileage, scoreListing, runScoringBatch, getWeights, DEFAULT_WEIGHTS };
+module.exports = { parseMileage, scoreListing, getPriceBand, runScoringBatch, getWeights, DEFAULT_WEIGHTS };

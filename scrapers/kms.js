@@ -5,6 +5,7 @@ const { nullCheck } = require('../services/validator');
 
 async function scrape(pageUrl) {
   const stats = { source: 'kms', scraped: 0, saved: 0, skipped: 0, failed: 0, startedAt: new Date() };
+  const seenUrls = [];
   try {
     const response = await axios.get(pageUrl);
     const $ = cheerio.load(response.data);
@@ -13,6 +14,7 @@ async function scrape(pageUrl) {
       links.push($(el).attr('href'));
     });
     for (const url of links) {
+      seenUrls.push(url);
       const exists = await db.Cars.exists({ url });
       if (exists) {
         stats.skipped++;
@@ -22,6 +24,9 @@ async function scrape(pageUrl) {
         if (saved) stats.saved++;
         else stats.failed++;
       }
+    }
+    if (seenUrls.length > 0) {
+      await db.Cars.updateMany({ url: { $in: seenUrls } }, { $set: { lastSeenAt: new Date() } }).catch(() => {});
     }
   } catch (err) {
     console.error('KMS scrape error:', err.message);

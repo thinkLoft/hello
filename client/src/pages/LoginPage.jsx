@@ -29,6 +29,7 @@ export default function LoginPage() {
   return (
     <div className="login-page">
       <div className="login-card">
+        <button className="login-back" onClick={() => navigate('/')}>← Back to listings</button>
         <h1 className="login-title">🚗 Beego Admin</h1>
         <p className="login-subtitle">Jamaica Car Listings</p>
 

@@ -27,6 +27,21 @@
   margin: 0;
 }
 
+.admin-back-btn {
+  background: none;
+  border: none;
+  color: var(--color-text-secondary);
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  transition: color 0.15s;
+}
+
+.admin-back-btn:hover {
+  color: var(--color-text);
+}
+
 .admin-logout-btn {
   padding: 0.65rem 1.25rem;
   background: #dc2626;

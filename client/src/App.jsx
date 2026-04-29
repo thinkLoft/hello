@@ -9,7 +9,7 @@ import PriceCalculator from './components/PriceCalculator';
 import ProtectedRoute from './components/ProtectedRoute';
 import LoginPage from './pages/LoginPage';
 import AdminPage from './pages/AdminPage';
-import { fetchCarsForSale, fetchUnderMil, fetchLatest, fetchCount, markAsSold } from './services/api';
+import { fetchCarsForSale, fetchUnderMil, fetchLatest, fetchCount, markAsSold, updateListing, hideListing } from './services/api';
 import './App.css';
 
 const FETCHERS = {
@@ -30,6 +30,7 @@ function HomePage() {
   const [selectedCar, setSelectedCar] = useState(null);
   const [totalCount, setTotalCount] = useState(0);
   const [soldIds, setSoldIds] = useState(new Set());
+  const [hiddenIds, setHiddenIds] = useState(new Set());
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
   useEffect(() => {
@@ -57,6 +58,7 @@ function HomePage() {
 
   const filteredCars = useMemo(() => {
     let result = allCars.filter((car) => {
+      if (hiddenIds.has(car._id)) return false;
       if (filters.make && car.make !== filters.make) return false;
       if (filters.bodyType && car.bodyType !== filters.bodyType) return false;
       if (filters.transmission && car.transmission !== filters.transmission) return false;
@@ -83,6 +85,12 @@ function HomePage() {
         case 'date-latest':
           result.sort((a, b) => new Date(b.date ?? 0) - new Date(a.date ?? 0));
           break;
+        case 'score-high':
+          result.sort((a, b) => (b.score ?? -1) - (a.score ?? -1));
+          break;
+        case 'score-low':
+          result.sort((a, b) => (a.score ?? 101) - (b.score ?? 101));
+          break;
         default:
           break;
       }
@@ -107,6 +115,17 @@ function HomePage() {
   const handleSold = async (car) => {
     await markAsSold(car._id);
     setSoldIds((prev) => new Set([...prev, car._id]));
+  };
+
+  const handleUpdate = (updated) => {
+    setAllCars((prev) => prev.map((c) => c._id === updated._id ? { ...c, ...updated } : c));
+    setSelectedCar((prev) => prev?._id === updated._id ? { ...prev, ...updated } : prev);
+  };
+
+  const handleHide = async (car) => {
+    await hideListing(car._id, true);
+    setHiddenIds((prev) => new Set([...prev, car._id]));
+    setSelectedCar(null);
   };
 
   const handleModalClose = () => {
@@ -156,7 +175,7 @@ function HomePage() {
       </main>
 
       {selectedCar && (
-        <CarModal car={selectedCar} onClose={handleModalClose} onSold={handleSold} />
+        <CarModal car={selectedCar} onClose={handleModalClose} onSold={handleSold} onUpdate={handleUpdate} onHide={handleHide} />
       )}
     </div>
   );

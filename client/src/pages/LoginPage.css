@@ -19,6 +19,21 @@
   gap: 1.5rem;
 }
 
+.login-back {
+  background: none;
+  border: none;
+  color: var(--color-text-secondary);
+  font-size: 0.8rem;
+  cursor: pointer;
+  padding: 0;
+  text-align: left;
+  transition: color 0.15s;
+}
+
+.login-back:hover {
+  color: var(--color-text);
+}
+
 .login-title {
   font-size: 1.75rem;
   font-weight: 800;

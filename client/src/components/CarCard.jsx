@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import './CarCard.css';
+import { useAuth } from '../context/AuthContext';
+import { scraperName } from '../utils/scraperNames';
 
 const formatPrice = (price) =>
   new Intl.NumberFormat('en-JM', {
@@ -8,8 +10,16 @@ const formatPrice = (price) =>
     maximumFractionDigits: 0,
   }).format(price);
 
+function scoreColor(score) {
+  if (score >= 70) return 'green';
+  if (score >= 40) return 'yellow';
+  return 'red';
+}
+
 export default function CarCard({ car, onClick, sold }) {
   const [imgError, setImgError] = useState(false);
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const hasImage = !imgError && car.imgs?.[0];
 
   return (
@@ -32,7 +42,12 @@ export default function CarCard({ car, onClick, sold }) {
         {car.imgs?.length > 1 && (
           <span className="car-card__img-count">+{car.imgs.length - 1} photos</span>
         )}
-        <span className="car-card__source">{car.user}</span>
+        <span className="car-card__source">{scraperName(car.user)}</span>
+        {isAdmin && car.score != null && (
+          <span className={`car-card__score car-card__score--${scoreColor(car.score)}`}>
+            {car.score}
+          </span>
+        )}
         {sold && (
           <div className="car-card__sold-overlay">
             <span>SOLD</span>

@@ -1,7 +1,8 @@
 import React from 'react';
 import './Filters.css';
+import { useAuth } from '../context/AuthContext';
 
-const SORT_OPTIONS = [
+const BASE_SORT_OPTIONS = [
   { value: '', label: 'Default' },
   { value: 'price-low', label: 'Price: Low to High' },
   { value: 'price-high', label: 'Price: High to Low' },
@@ -9,7 +10,15 @@ const SORT_OPTIONS = [
   { value: 'date-latest', label: 'Date: Latest' },
 ];
 
+const ADMIN_SORT_OPTIONS = [
+  ...BASE_SORT_OPTIONS,
+  { value: 'score-high', label: 'Quality Score: Best First' },
+  { value: 'score-low', label: 'Quality Score: Worst First' },
+];
+
 export default function Filters({ cars, filters, onFilterChange, resultCount }) {
+  const { user } = useAuth();
+  const sortOptions = user?.role === 'admin' ? ADMIN_SORT_OPTIONS : BASE_SORT_OPTIONS;
   const unique = (key) =>
     [...new Set(cars.map((c) => c[key]).filter(Boolean))].sort();
 
@@ -57,7 +66,7 @@ export default function Filters({ cars, filters, onFilterChange, resultCount }) 
         </select>
 
         <select className="filters__select" value={filters.sort ?? ''} onChange={handleChange('sort')}>
-          {SORT_OPTIONS.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+          {sortOptions.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
         </select>
 
         {hasFilters && (

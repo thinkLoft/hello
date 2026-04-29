@@ -17,8 +17,21 @@ export const fetchCount = () => apiFetch('/count');
 export const fetchPriceData = (yearUpper, yearLower, make, model) =>
   apiFetch(`/data/${yearUpper}/${yearLower}/${encodeURIComponent(make)}/${encodeURIComponent(model)}`);
 
-export const markAsSold = (id) =>
-  apiFetch(`/cars/${id}`, { method: 'PATCH' });
+const jsonPatch = (path, body) =>
+  apiFetch(path, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+
+export const markAsSold = (id) => jsonPatch(`/cars/${id}`, { sold: true });
+export const updateListing = (id, fields) => jsonPatch(`/cars/${id}`, fields);
+export const hideListing = (id, hidden) => jsonPatch(`/cars/${id}`, { hidden });
+export const rescoreListing = (id) =>
+  apiFetch(`/cars/${id}/rescore`, { method: 'POST' });
+
+export const triggerRescore = () =>
+  apiFetch('/scoring/run', { method: 'POST' });
 
 export const fetchScraperStats = () => apiFetch('/scraper-stats');
 export const fetchScoringWeights = () => apiFetch('/scoring-weights');

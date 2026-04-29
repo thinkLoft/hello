@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../../models');
 const { requireAdmin } = require('../../middleware/auth');
-const { DEFAULT_WEIGHTS } = require('../../services/scoringService');
+const { DEFAULT_WEIGHTS, runScoringBatch } = require('../../services/scoringService');
 
 router.get('/scraper-stats', requireAdmin, async (req, res) => {
   try {
@@ -45,6 +45,15 @@ router.patch('/scoring-weights', requireAdmin, async (req, res) => {
       { upsert: true, new: true }
     );
     res.json(doc.value);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/scoring/run', requireAdmin, async (req, res) => {
+  try {
+    const scored = await runScoringBatch();
+    res.json({ ok: true, scored });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

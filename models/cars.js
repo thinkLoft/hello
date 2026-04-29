@@ -24,8 +24,12 @@ const carSchema = new Schema(
     comments: { type: String },
     score:          { type: Number, default: null },
     scoreBreakdown: { type: Object, default: null },
+    scoreSummary:   { type: String, default: null },
     anomalyFlags:   { type: [String], default: [] },
     priceband:      { type: String, default: null },
+    adminNotes:     { type: String, default: null },
+    hidden:         { type: Boolean, default: false },
+    lastSeenAt:     { type: Date, default: null },
   },
   { timestamps: true }
 );
@@ -33,6 +37,7 @@ const carSchema = new Schema(
 carSchema.index({ posted: 1, price: 1, year: 1 });
 carSchema.index({ make: 1, model: 1, year: 1 });
 carSchema.index({ score: -1, posted: 1 });
+carSchema.index({ lastSeenAt: 1 });
 
 const Cars = mongoose.model('Cars', carSchema);
 

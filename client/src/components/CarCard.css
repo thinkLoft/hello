@@ -75,6 +75,22 @@
   backdrop-filter: blur(4px);
 }
 
+.car-card__score {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.2rem 0.5rem;
+  border-radius: 100px;
+  backdrop-filter: blur(4px);
+  letter-spacing: 0.02em;
+}
+
+.car-card__score--green  { background: rgb(22 163 74 / 0.85);  color: #fff; }
+.car-card__score--yellow { background: rgb(202 138 4 / 0.85);  color: #fff; }
+.car-card__score--red    { background: rgb(220 38 38 / 0.85);  color: #fff; }
+
 .car-card__body {
   padding: 1rem;
   display: flex;

@@ -5,6 +5,7 @@ import {
   fetchScraperStats,
   fetchScoringWeights,
   updateScoringWeights,
+  triggerRescore,
 } from '../services/api';
 import './AdminPage.css';
 
@@ -41,6 +42,11 @@ export default function AdminPage() {
   // Scraper stats
   const [scraperStats, setScraperStats] = useState(null);
   const [scraperStatsError, setScraperStatsError] = useState('');
+
+  // Bulk rescore
+  const [rescoreLoading, setRescoreLoading] = useState(false);
+  const [rescoreResult, setRescoreResult] = useState(null);
+  const [rescoreError, setRescoreError] = useState('');
 
   // Scoring weights
   const [weights, setWeights] = useState(null);
@@ -104,6 +110,20 @@ export default function AdminPage() {
     setWeightsSuccess('');
   };
 
+  const handleRescore = async () => {
+    setRescoreLoading(true);
+    setRescoreResult(null);
+    setRescoreError('');
+    try {
+      const result = await triggerRescore();
+      setRescoreResult(result);
+    } catch (err) {
+      setRescoreError(err.message);
+    } finally {
+      setRescoreLoading(false);
+    }
+  };
+
   const handleWeightsSave = async (e) => {
     e.preventDefault();
     setWeightsError('');
@@ -128,6 +148,7 @@ export default function AdminPage() {
     <div className="admin-page">
       <div className="admin-container">
         <div className="admin-header">
+          <button className="admin-back-btn" onClick={() => navigate('/')}>← Listings</button>
           <h1 className="admin-title">Admin Dashboard</h1>
           <button className="admin-logout-btn" onClick={handleLogout}>Sign Out</button>
         </div>
@@ -202,6 +223,27 @@ export default function AdminPage() {
               ))}
             </div>
           )}
+        </div>
+
+        {/* Data Quality */}
+        <div className="admin-card">
+          <h2>Data Quality</h2>
+          <p className="admin-muted" style={{ marginBottom: '1rem' }}>
+            Re-score all active listings using the current weights and market data. Run this after adjusting weights or fixing scraper selector gaps.
+          </p>
+          {rescoreError && <div className="admin-error" style={{ marginBottom: '0.75rem' }}>{rescoreError}</div>}
+          {rescoreResult && (
+            <div className="admin-success" style={{ marginBottom: '0.75rem' }}>
+              Scored {rescoreResult.scored} listings — {new Date().toLocaleTimeString()}
+            </div>
+          )}
+          <button
+            className="admin-submit-btn"
+            onClick={handleRescore}
+            disabled={rescoreLoading}
+          >
+            {rescoreLoading ? 'Rescoring…' : 'Re-score All Listings'}
+          </button>
         </div>
 
         {/* Scoring Weights */}
