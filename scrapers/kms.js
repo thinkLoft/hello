@@ -69,4 +69,4 @@ async function scrapeDetail(srcURL) {
   }
 }
 
-module.exports = { scrape };
+module.exports = { scrape, scrapeDetail };

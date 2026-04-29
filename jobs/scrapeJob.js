@@ -4,8 +4,11 @@ const { checker: autoadsChecker } = require('../scrapers/autoads');
 const { scrape: jcoScrape } = require('../scrapers/jco');
 const { scrape: kmsScrape } = require('../scrapers/kms');
 const { fetchMissingContacts } = require('../scrapers/contacts');
+const { refreshListings } = require('./refreshListings');
 const db = require('../models');
 const { runScoringBatch } = require('../services/scoringService');
+
+let tickCount = 0;
 
 async function persistScraperStats(stats) {
   if (!stats?.source) return;
@@ -24,7 +27,8 @@ async function persistScraperStats(stats) {
 const job = new CronJob(
   '0 */15 * * * *',
   async function () {
-    console.log(`[${new Date().toISOString()}] Cron job started`);
+    tickCount++;
+    console.log(`[${new Date().toISOString()}] Cron job started (tick ${tickCount})`);
     const results = await Promise.allSettled([
       autoadsChecker(process.env.SITE1),
       // jacarsScrape(), // TODO: sitemap discovery ready; blocked on Puppeteer (Cloudflare on detail pages)
@@ -39,6 +43,13 @@ const job = new CronJob(
           console.error('[Stats] persist error:', err.message)
         );
       }
+    }
+
+    // Run listing refresh every 4th tick (~1 hour)
+    if (tickCount % 4 === 0) {
+      await refreshListings().catch((err) =>
+        console.error('[Refresh] error:', err.message)
+      );
     }
 
     await runScoringBatch();

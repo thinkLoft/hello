@@ -7,6 +7,7 @@ import {
   fetchScoringWeights,
   updateScoringWeights,
   triggerRescore,
+  triggerRefresh,
 } from '../services/api';
 import './AdminPage.css';
 
@@ -51,6 +52,11 @@ export default function AdminPage() {
   const [rescoreLoading, setRescoreLoading] = useState(false);
   const [rescoreResult, setRescoreResult] = useState(null);
   const [rescoreError, setRescoreError] = useState('');
+
+  // Listing refresh
+  const [refreshLoading, setRefreshLoading] = useState(false);
+  const [refreshResult, setRefreshResult] = useState(null);
+  const [refreshError, setRefreshError] = useState('');
 
   // Scoring weights
   const [weights, setWeights] = useState(null);
@@ -145,6 +151,20 @@ export default function AdminPage() {
       setWeightsError(err.message);
     } finally {
       setWeightsSaving(false);
+    }
+  };
+
+  const handleRefresh = async () => {
+    setRefreshLoading(true);
+    setRefreshResult(null);
+    setRefreshError('');
+    try {
+      const result = await triggerRefresh();
+      setRefreshResult(result);
+    } catch (err) {
+      setRefreshError(err.message);
+    } finally {
+      setRefreshLoading(false);
     }
   };
 
@@ -319,6 +339,24 @@ export default function AdminPage() {
             disabled={rescoreLoading}
           >
             {rescoreLoading ? 'Rescoring…' : 'Re-score All Listings'}
+          </button>
+
+          <p className="admin-muted" style={{ marginTop: '1.25rem', marginBottom: '1rem' }}>
+            Re-check up to 20 stale listings for price/mileage changes and deactivate any that have been removed. Runs automatically every hour.
+          </p>
+          {refreshError && <div className="admin-error" style={{ marginBottom: '0.75rem' }}>{refreshError}</div>}
+          {refreshResult && (
+            <div className="admin-success" style={{ marginBottom: '0.75rem' }}>
+              Checked {refreshResult.checked} — refreshed {refreshResult.refreshed}, deactivated {refreshResult.deactivated}, failed {refreshResult.failed}
+            </div>
+          )}
+          <button
+            className="admin-submit-btn"
+            onClick={handleRefresh}
+            disabled={refreshLoading}
+            style={{ marginTop: 0 }}
+          >
+            {refreshLoading ? 'Refreshing…' : 'Refresh Stale Listings'}
           </button>
         </div>
 

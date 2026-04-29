@@ -77,4 +77,4 @@ async function scrape(link) {
   }
 }
 
-module.exports = { checker };
+module.exports = { checker, scrapeDetail: scrape };

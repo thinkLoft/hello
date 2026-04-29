@@ -3,6 +3,7 @@ const router = express.Router();
 const db = require('../../models');
 const { requireAdmin } = require('../../middleware/auth');
 const { DEFAULT_WEIGHTS, runScoringBatch } = require('../../services/scoringService');
+const { refreshListings } = require('../../jobs/refreshListings');
 
 router.get('/scraper-stats', requireAdmin, async (req, res) => {
   try {
@@ -59,6 +60,15 @@ router.get('/scraper-runs', requireAdmin, async (req, res) => {
       .limit(25)
       .lean();
     res.json(runs);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/listings/refresh', requireAdmin, async (req, res) => {
+  try {
+    const result = await refreshListings();
+    res.json({ ok: true, ...result });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
