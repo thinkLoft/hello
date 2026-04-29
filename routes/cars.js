@@ -61,7 +61,7 @@ router.get('/latest', async (req, res) => {
 
 router.get('/count', async (req, res) => {
   try {
-    const count = await db.Cars.countDocuments();
+    const count = await db.Cars.countDocuments({ posted: true, hidden: { $ne: true }, imgs: { $gt: [] } });
     res.json({ count });
   } catch (err) {
     res.status(500).json({ error: err.message });

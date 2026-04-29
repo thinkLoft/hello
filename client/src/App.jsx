@@ -18,7 +18,7 @@ const FETCHERS = {
   classics: fetchLatest,
 };
 
-const EMPTY_FILTERS = { make: '', bodyType: '', transmission: '', parish: '', search: '', sort: '' };
+const EMPTY_FILTERS = { make: '', bodyType: '', transmission: '', parish: '', search: '', sort: '', minPrice: '', maxPrice: '' };
 const PAGE_SIZE = 24;
 
 function HomePage() {
@@ -57,12 +57,16 @@ function HomePage() {
   }, [activeTab]);
 
   const filteredCars = useMemo(() => {
+    const minP = filters.minPrice ? Number(filters.minPrice) : null;
+    const maxP = filters.maxPrice ? Number(filters.maxPrice) : null;
     let result = allCars.filter((car) => {
       if (hiddenIds.has(car._id)) return false;
       if (filters.make && car.make !== filters.make) return false;
       if (filters.bodyType && car.bodyType !== filters.bodyType) return false;
       if (filters.transmission && car.transmission !== filters.transmission) return false;
       if (filters.parish && car.parish !== filters.parish) return false;
+      if (minP !== null && (car.price ?? 0) < minP) return false;
+      if (maxP !== null && (car.price ?? 0) > maxP) return false;
       if (filters.search) {
         const q = filters.search.toLowerCase();
         const hay = `${car.year ?? ''} ${car.make ?? ''} ${car.model ?? ''}`.toLowerCase();
