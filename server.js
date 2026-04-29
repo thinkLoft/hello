@@ -99,6 +99,20 @@ async function connectDb() {
     const { loadMakeDb } = require('./services/validator');
     await loadMakeDb();
 
+    // Migrate: drop capped ScraperRun collection so it's recreated as a regular TTL collection
+    try {
+      const collNames = (await mongoose.connection.db.listCollections({ name: 'scraperruns' }).toArray()).map(c => c.name);
+      if (collNames.includes('scraperruns')) {
+        const info = await mongoose.connection.db.command({ collStats: 'scraperruns' });
+        if (info.capped) {
+          await mongoose.connection.db.dropCollection('scraperruns');
+          console.log('Migrated scraperruns: dropped capped collection (will recreate as TTL)');
+        }
+      }
+    } catch (e) {
+      console.error('ScraperRun migration error:', e.message);
+    }
+
     const scraperJob = require('./jobs/scrapeJob');
     // If no scraper has run in the last hour, fire immediately on startup
     const recentRun = await mongoose.connection.db

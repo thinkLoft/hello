@@ -55,9 +55,10 @@ router.get('/scraper-runs', requireAdmin, async (req, res) => {
   try {
     const { source } = req.query;
     const filter = source ? { source } : {};
+    const limit = Math.min(parseInt(req.query.limit) || 200, 500);
     const runs = await db.ScraperRun.find(filter)
       .sort({ startedAt: -1 })
-      .limit(25)
+      .limit(limit)
       .lean();
     res.json(runs);
   } catch (err) {
