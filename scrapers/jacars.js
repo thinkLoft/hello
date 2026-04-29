@@ -2,6 +2,7 @@ const axios = require('axios');
 const cheerio = require('cheerio');
 const db = require('../models');
 const { nullCheck } = require('../services/validator');
+const { fetchPage } = require('./browser');
 
 const ATTR_MAP = {
   Year: 'year',
@@ -15,32 +16,47 @@ const ATTR_MAP = {
   Mileage: 'mileage',
 };
 
-// Discovery: sitemap-advert.xml lists all ads with lastmod dates — filter to last 24 h for new listings.
-// Detail pages are Cloudflare-protected (same as JCO); needs Puppeteer before this can run.
+// Sitemap discovery works via axios; detail pages need Puppeteer (Cloudflare-protected).
 async function scrape() {
+  const stats = { source: 'jacars', scraped: 0, saved: 0, skipped: 0, failed: 0, startedAt: new Date() };
+  const seenUrls = [];
   try {
-    const response = await axios.get('https://www.jacars.net/sitemap-advert.xml');
+    const response = await axios.get('https://www.jacars.net/sitemap-advert.xml', { timeout: 15000 });
     const $ = cheerio.load(response.data, { xmlMode: true });
     const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-    const links = [];
     $('url').each((i, el) => {
       const loc = $(el).children('loc').text();
       const lastmod = $(el).children('lastmod').text();
-      if (loc.includes('/adv/') && lastmod >= cutoff) links.push(loc);
+      if (loc.includes('/adv/') && lastmod >= cutoff) seenUrls.push(loc);
     });
-    for (const url of links) {
+    for (const url of seenUrls) {
       const exists = await db.Cars.exists({ url });
-      if (!exists) await scrapeDetail(url);
+      if (exists) {
+        stats.skipped++;
+      } else {
+        stats.scraped++;
+        const saved = await scrapeDetail(url);
+        if (saved) stats.saved++;
+        else stats.failed++;
+      }
+    }
+    if (seenUrls.length > 0) {
+      await db.Cars.updateMany(
+        { url: { $in: seenUrls } },
+        { $set: { lastSeenAt: new Date() } }
+      ).catch(() => {});
     }
   } catch (err) {
     console.error('JaCars scrape error:', err.message);
+    stats.failed++;
   }
+  return stats;
 }
 
 async function scrapeDetail(srcURL) {
   try {
-    const response = await axios.get(srcURL);
-    const $ = cheerio.load(response.data);
+    const html = await fetchPage(srcURL, { waitSelector: '#ad-title' });
+    const $ = cheerio.load(html);
     const titleParts = $('#ad-title').text().trim().split(' ');
     let price = Math.round(
       Number($("meta[itemprop='price']").attr('content')?.replace(/[^0-9.-]+/g, '') || 0)
@@ -55,12 +71,12 @@ async function scrapeDetail(srcURL) {
     });
 
     const imgs = [];
-    $('.announcement-content-container').children('img').each((i, el) => {
+    $('img.announcement__images-item').each((i, el) => {
       const src = $(el).attr('src')?.trim();
-      if (src) imgs.push(src);
+      if (src && !imgs.includes(src)) imgs.push(src);
     });
 
-    await nullCheck({
+    return await nullCheck({
       user: 'jacars',
       url: srcURL,
       price,
@@ -77,7 +93,8 @@ async function scrapeDetail(srcURL) {
     });
   } catch (err) {
     console.error('JaCars detail error:', err.message);
+    return false;
   }
 }
 
-module.exports = { scrape };
+module.exports = { scrape, scrapeDetail };

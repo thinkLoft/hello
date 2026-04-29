@@ -2,6 +2,8 @@ const axios = require('axios');
 const db = require('../models');
 const { scrapeDetail: autoadsDetail } = require('../scrapers/autoads');
 const { scrapeDetail: kmsDetail } = require('../scrapers/kms');
+const { scrapeDetail: jacarsDetail } = require('../scrapers/jacars');
+const { scrapeDetail: jcoDetail } = require('../scrapers/jco');
 
 const HEADERS = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' };
 const BATCH_SIZE = 20;
@@ -10,6 +12,8 @@ const STALE_HOURS = 24;
 const DETAIL_SCRAPERS = {
   autoadsja: autoadsDetail,
   kms: kmsDetail,
+  jacars: jacarsDetail,
+  jamaicaonlineclassifieds: jcoDetail,
 };
 
 async function refreshListings() {

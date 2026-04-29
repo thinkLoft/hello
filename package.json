@@ -30,6 +30,8 @@
     "mongoose": "^8.5.0",
     "morgan": "^1.10.0",
     "nodemailer": "^8.0.7",
+    "puppeteer-extra": "^3.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2",
     "stats-lite": "^2.2.0"
   },
   "devDependencies": {
