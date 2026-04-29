@@ -65,6 +65,9 @@ async function nullCheck(x) {
     date: new Date().toISOString().slice(0, 10).replace(/-/g, ''),
   };
 
+  // Mileage: normalize empty string/undefined to null
+  res.mileage = (res.mileage && String(res.mileage).trim()) || null;
+
   // Image check
   if (!res.imgs?.length) {
     res.comments += 'No images. ';

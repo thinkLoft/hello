@@ -10,6 +10,7 @@ const ATTR_MAP = {
   'Body Type': 'bodyType',
   Transmission: 'transmission',
   'Driver Side': 'driverSide',
+  Mileage: 'mileage',
 };
 
 async function scrape(pageUrl) {
@@ -49,9 +50,13 @@ async function scrapeDetail(srcURL) {
     const attr = {};
 
     $('li.collection-item').each((i, el) => {
-      const subtitle = $(el).children('div').text().replace(/:\W*.*/g, '').trim();
-      const val = $(el).children('div').children('a').text().trim();
-      if (ATTR_MAP[subtitle]) attr[ATTR_MAP[subtitle]] = val;
+      const divText = $(el).children('div').text().trim();
+      const colonIdx = divText.indexOf(':');
+      if (colonIdx === -1) return;
+      const subtitle = divText.slice(0, colonIdx).trim();
+      // Linked values (Year, Make, etc.) are in <a>; plain text fields (Mileage) fall back to text after colon
+      const val = $(el).children('div').children('a').text().trim() || divText.slice(colonIdx + 1).trim();
+      if (ATTR_MAP[subtitle] && val) attr[ATTR_MAP[subtitle]] = val;
     });
 
     if (!attr.year) return;

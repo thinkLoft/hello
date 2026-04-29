@@ -13,8 +13,8 @@ async function checker(siteUrl) {
     const urls = [];
     $('item').each((i, el) => urls.push($(el).children('link').text()));
     for (const url of urls) {
-      const exists = await db.Cars.exists({ url });
-      if (exists) {
+      const existing = await db.Cars.findOne({ url }, { mileage: 1 }).lean();
+      if (existing?.mileage) {
         stats.skipped++;
       } else {
         stats.scraped++;
