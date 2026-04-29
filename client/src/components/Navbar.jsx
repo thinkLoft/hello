@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import './Navbar.css';
 
 const TABS = [
+  { id: 'all', label: 'All Listings', sub: 'Jamaica' },
   { id: 'forsale', label: 'For Sale', sub: '1M+' },
   { id: 'undermil', label: 'Under 1M', sub: 'Budget' },
   { id: 'classics', label: 'Classics', sub: '10+ yrs' },

@@ -10,6 +10,7 @@ async function apiFetch(path, opts = {}) {
   return res.json();
 }
 
+export const fetchAll = () => apiFetch('/all');
 export const fetchCarsForSale = () => apiFetch('/carsforsale');
 export const fetchUnderMil = () => apiFetch('/undermil');
 export const fetchLatest = () => apiFetch('/latest');

@@ -8,6 +8,8 @@ const BASE_SORT_OPTIONS = [
   { value: 'price-high', label: 'Price: High to Low' },
   { value: 'year-new', label: 'Year: Newest' },
   { value: 'date-latest', label: 'Date: Latest' },
+  { value: 'model-az', label: 'Model: A → Z' },
+  { value: 'model-za', label: 'Model: Z → A' },
 ];
 
 const ADMIN_SORT_OPTIONS = [

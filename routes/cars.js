@@ -59,6 +59,19 @@ router.get('/latest', async (req, res) => {
   }
 });
 
+router.get('/all', async (req, res) => {
+  try {
+    const docs = await db.Cars.find({
+      posted: true,
+      hidden: { $ne: true },
+      imgs: { $gt: [] },
+    }).sort({ _id: -1 }).limit(2000);
+    res.json(docs);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.get('/count', async (req, res) => {
   try {
     const count = await db.Cars.countDocuments({ posted: true, hidden: { $ne: true }, imgs: { $gt: [] } });

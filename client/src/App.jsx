@@ -9,10 +9,11 @@ import PriceCalculator from './components/PriceCalculator';
 import ProtectedRoute from './components/ProtectedRoute';
 import LoginPage from './pages/LoginPage';
 import AdminPage from './pages/AdminPage';
-import { fetchCarsForSale, fetchUnderMil, fetchLatest, fetchCount, markAsSold, updateListing, hideListing } from './services/api';
+import { fetchAll, fetchCarsForSale, fetchUnderMil, fetchLatest, fetchCount, markAsSold, updateListing, hideListing } from './services/api';
 import './App.css';
 
 const FETCHERS = {
+  all: fetchAll,
   forsale: fetchCarsForSale,
   undermil: fetchUnderMil,
   classics: fetchLatest,
@@ -22,7 +23,7 @@ const EMPTY_FILTERS = { make: '', bodyType: '', transmission: '', parish: '', se
 const PAGE_SIZE = 24;
 
 function HomePage() {
-  const [activeTab, setActiveTab] = useState('forsale');
+  const [activeTab, setActiveTab] = useState('all');
   const [allCars, setAllCars] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -94,6 +95,12 @@ function HomePage() {
           break;
         case 'score-low':
           result.sort((a, b) => (a.score ?? 101) - (b.score ?? 101));
+          break;
+        case 'model-az':
+          result.sort((a, b) => (a.model ?? '').localeCompare(b.model ?? ''));
+          break;
+        case 'model-za':
+          result.sort((a, b) => (b.model ?? '').localeCompare(a.model ?? ''));
           break;
         default:
           break;

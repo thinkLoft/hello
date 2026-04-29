@@ -7,8 +7,15 @@ const { refreshListings } = require('../../jobs/refreshListings');
 
 router.get('/scraper-stats', requireAdmin, async (req, res) => {
   try {
-    const stats = await db.ScraperStats.find({}).sort({ source: 1 }).lean();
-    res.json(stats);
+    const [stats, counts] = await Promise.all([
+      db.ScraperStats.find({}).sort({ source: 1 }).lean(),
+      db.Cars.aggregate([
+        { $match: { posted: true, hidden: { $ne: true }, imgs: { $gt: [] } } },
+        { $group: { _id: '$user', count: { $sum: 1 } } },
+      ]),
+    ]);
+    const countMap = Object.fromEntries(counts.map((c) => [c._id, c.count]));
+    res.json(stats.map((s) => ({ ...s, activeListings: countMap[s.source] ?? 0 })));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

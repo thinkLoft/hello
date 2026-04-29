@@ -58,6 +58,19 @@ export default function AdminPage() {
   const [refreshResult, setRefreshResult] = useState(null);
   const [refreshError, setRefreshError] = useState('');
 
+  // Admin notes
+  const [notes, setNotes] = useState(() => localStorage.getItem('adminNotes') ?? '');
+  const [notesSaved, setNotesSaved] = useState(false);
+
+  const handleNotesSave = () => {
+    localStorage.setItem('adminNotes', notes);
+    setNotesSaved(true);
+    setTimeout(() => setNotesSaved(false), 1500);
+  };
+
+  // Revenue plan
+  const [showRevenuePlan, setShowRevenuePlan] = useState(false);
+
   // Scoring weights
   const [weights, setWeights] = useState(null);
   const [weightsLoading, setWeightsLoading] = useState(true);
@@ -189,19 +202,25 @@ export default function AdminPage() {
         <div className="admin-header">
           <button className="admin-back-btn" onClick={() => navigate('/')}>← Listings</button>
           <h1 className="admin-title">Admin Dashboard</h1>
-          <a
-            href="/revenue-action-plan.html"
-            target="_blank"
-            rel="noopener noreferrer"
+          <button
             className="admin-back-btn"
-            style={{ textDecoration: 'none' }}
+            onClick={() => setShowRevenuePlan((v) => !v)}
           >
-            Revenue Action Plan ↗
-          </a>
+            {showRevenuePlan ? '← Back to Admin' : 'Revenue Action Plan'}
+          </button>
           <button className="admin-logout-btn" onClick={handleLogout}>Sign Out</button>
         </div>
 
-        {/* Current User */}
+        {showRevenuePlan && (
+          <iframe
+            src="/revenue-action-plan.html"
+            style={{ width: '100%', height: '80vh', border: 'none', borderRadius: '8px', marginTop: '1rem' }}
+            title="Revenue Action Plan"
+          />
+        )}
+
+        {!showRevenuePlan && (
+        <>{/* Current User */}
         <div className="admin-card">
           <h2>Current User</h2>
           <p className="admin-email">{user?.email}</p>
@@ -254,6 +273,7 @@ export default function AdminPage() {
               <div className="scraper-stats-row scraper-stats-header">
                 <span>Source</span>
                 <span>Last Run</span>
+                <span>Active</span>
                 <span>Scraped</span>
                 <span>Saved</span>
                 <span>Skipped</span>
@@ -270,6 +290,7 @@ export default function AdminPage() {
                       {expandedSource === s.source ? '▾' : '▸'} {s.source}
                     </span>
                     <span className="scraper-date">{formatDate(s.lastRun)}</span>
+                    <span className="stat-saved">{s.activeListings ?? 0}</span>
                     <span>{s.scraped}</span>
                     <span className="stat-saved">{s.saved}</span>
                     <span className="stat-skipped">{s.skipped}</span>
@@ -407,6 +428,29 @@ export default function AdminPage() {
             </form>
           )}
         </div>
+
+        {/* Admin Notes */}
+        <div className="admin-card">
+          <h2>Dev Notes</h2>
+          <p className="admin-muted" style={{ marginBottom: '0.75rem' }}>
+            Jot down modification requests as you test. Saved locally in your browser.
+          </p>
+          <textarea
+            style={{ width: '100%', minHeight: '140px', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--border)', fontFamily: 'inherit', fontSize: '0.875rem', resize: 'vertical', background: 'var(--bg)' }}
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="• Listing count still off on mobile&#10;• Add dealer filter&#10;• …"
+          />
+          <button
+            className="admin-submit-btn"
+            onClick={handleNotesSave}
+            style={{ marginTop: '0.5rem' }}
+          >
+            {notesSaved ? 'Saved ✓' : 'Save Notes'}
+          </button>
+        </div>
+
+        </>)}
 
       </div>
     </div>
