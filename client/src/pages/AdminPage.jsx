@@ -150,6 +150,15 @@ export default function AdminPage() {
         <div className="admin-header">
           <button className="admin-back-btn" onClick={() => navigate('/')}>← Listings</button>
           <h1 className="admin-title">Admin Dashboard</h1>
+          <a
+            href="/revenue-action-plan.html"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="admin-back-btn"
+            style={{ textDecoration: 'none' }}
+          >
+            Revenue Action Plan ↗
+          </a>
           <button className="admin-logout-btn" onClick={handleLogout}>Sign Out</button>
         </div>
 

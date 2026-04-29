@@ -1,0 +1,907 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BEEGO — Revenue Action Plan</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700&family=DM+Mono:wght@400;500&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --gold: #F5C842;
+  --teal: #4ECDC4;
+  --orange: #FF6B35;
+  --bg: #F5F2EC;
+  --header-bg: #0D0D0D;
+  --card-bg: #ffffff;
+  --text: #1a1a1a;
+  --text-muted: #666;
+  --border: #e8e3da;
+  --impact-high: #F5C842;
+  --impact-med: #8BAD8B;
+  --impact-low: #B0A8C8;
+  --shadow: 0 2px 8px rgba(0,0,0,0.07);
+  --shadow-hover: 0 6px 20px rgba(0,0,0,0.12);
+}
+
+body {
+  font-family: 'Syne', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+}
+
+/* ── STICKY HEADER ── */
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--header-bg);
+  color: #fff;
+  padding: 14px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  border-bottom: 2px solid var(--gold);
+}
+
+.site-header h1 {
+  font-family: 'Syne', sans-serif;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--gold);
+  white-space: nowrap;
+}
+
+.legend {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'DM Mono', monospace;
+  font-size: 0.68rem;
+  color: rgba(255,255,255,0.7);
+}
+
+.legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* ── FILTER BAR ── */
+.filter-bar {
+  background: var(--header-bg);
+  padding: 0 24px 14px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.filter-btn {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  padding: 6px 14px;
+  border: 1px solid rgba(255,255,255,0.2);
+  background: transparent;
+  color: rgba(255,255,255,0.6);
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.filter-btn:hover {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+
+.filter-btn.active {
+  background: var(--gold);
+  border-color: var(--gold);
+  color: #0D0D0D;
+}
+
+.filter-btn.f-teal.active {
+  background: var(--teal);
+  border-color: var(--teal);
+  color: #0D0D0D;
+}
+
+.filter-btn.f-orange.active {
+  background: var(--orange);
+  border-color: var(--orange);
+  color: #fff;
+}
+
+/* ── MAIN GRID ── */
+.main {
+  padding: 24px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  transition: grid-template-columns 0.3s ease;
+}
+
+.column {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  transition: opacity 0.25s ease;
+}
+
+.column.hidden {
+  display: none;
+}
+
+.column-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid var(--border);
+}
+
+.column-header h2 {
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.col-badge {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.65rem;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-weight: 500;
+}
+
+.col-badge.teal { background: rgba(78,205,196,0.15); color: var(--teal); }
+.col-badge.orange { background: rgba(255,107,53,0.12); color: var(--orange); }
+
+/* ── PHASE LABEL ── */
+.phase-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  padding: 20px 0 8px;
+  border-top: 1px solid var(--border);
+  margin-top: 8px;
+}
+
+.phase-label:first-child {
+  border-top: none;
+  margin-top: 0;
+  padding-top: 0;
+}
+
+/* ── CARDS ── */
+.card {
+  background: var(--card-bg);
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--impact-high);
+  margin-bottom: 10px;
+  box-shadow: var(--shadow);
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+  overflow: hidden;
+}
+
+.card:hover { box-shadow: var(--shadow-hover); transform: translateY(-2px); }
+.card[data-impact="med"] { border-left-color: var(--impact-med); }
+.card[data-impact="low"] { border-left-color: var(--impact-low); }
+
+.card.hidden { display: none; }
+
+.card-header {
+  padding: 14px 16px;
+  cursor: pointer;
+  user-select: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.card-header:focus { outline: 2px solid var(--gold); outline-offset: -2px; }
+
+.card-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.card-id {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  background: var(--bg);
+  padding: 2px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.card-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 0.88rem;
+  font-weight: 600;
+  flex: 1;
+  line-height: 1.3;
+}
+
+.card-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.time-pill {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.65rem;
+  padding: 2px 8px;
+  border-radius: 20px;
+  background: var(--bg);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.expand-icon {
+  font-size: 1.1rem;
+  font-weight: 300;
+  color: var(--text-muted);
+  transition: transform 0.25s ease;
+  line-height: 1;
+  width: 20px;
+  text-align: center;
+}
+
+.card.expanded .expand-icon { transform: rotate(45deg); }
+
+.card-subtitle {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+/* ── EXPANDED BODY ── */
+.card-body {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.35s ease;
+}
+
+.card.expanded .card-body { max-height: 600px; }
+
+.card-body-inner {
+  padding: 0 16px 16px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.detail-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.65rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-top: 12px;
+  margin-bottom: 4px;
+}
+
+.how-text {
+  font-size: 0.8rem;
+  line-height: 1.6;
+  color: #333;
+}
+
+.steps-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.steps-list li {
+  font-size: 0.78rem;
+  line-height: 1.5;
+  padding-left: 16px;
+  position: relative;
+  color: #333;
+}
+
+.steps-list li::before {
+  content: '—';
+  position: absolute;
+  left: 0;
+  color: var(--text-muted);
+}
+
+.revenue-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'DM Mono', monospace;
+  font-size: 0.72rem;
+  font-weight: 500;
+  padding: 6px 14px;
+  border-radius: 20px;
+  background: rgba(245,200,66,0.12);
+  color: #8a6d00;
+  border: 1px solid rgba(245,200,66,0.3);
+  margin-top: 4px;
+  align-self: flex-start;
+}
+
+.revenue-pill::before { content: '↗'; font-size: 0.8rem; }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 680px) {
+  .columns { grid-template-columns: 1fr !important; }
+  .site-header { padding: 12px 16px; }
+  .site-header h1 { font-size: 0.85rem; }
+  .filter-bar { padding: 0 16px 12px; gap: 6px; }
+  .main { padding: 16px; }
+  .legend { gap: 8px; }
+}
+
+/* ── PRINT ── */
+@media print {
+  .site-header, .filter-bar { position: static; }
+  .filter-btn { display: none; }
+  .card-body { max-height: none !important; overflow: visible !important; }
+  .card:hover { transform: none; box-shadow: var(--shadow); }
+  .expand-icon { display: none; }
+  .columns { grid-template-columns: 1fr 1fr !important; }
+}
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <h1>BEEGO — Revenue Action Plan</h1>
+  <div class="legend" aria-label="Color legend">
+    <span class="legend-item"><span class="legend-dot" style="background:var(--teal)"></span>Virtual / Cowork</span>
+    <span class="legend-item"><span class="legend-dot" style="background:var(--orange)"></span>Boots on Ground</span>
+    <span class="legend-item"><span class="legend-dot" style="background:var(--impact-high)"></span>High Impact</span>
+    <span class="legend-item"><span class="legend-dot" style="background:var(--impact-med)"></span>Medium Impact</span>
+    <span class="legend-item"><span class="legend-dot" style="background:var(--impact-low)"></span>Foundation</span>
+  </div>
+</header>
+
+<div class="filter-bar">
+  <button class="filter-btn active" data-filter="all">All</button>
+  <button class="filter-btn f-teal" data-filter="virtual">Virtual / Cowork</button>
+  <button class="filter-btn f-orange" data-filter="boots">Boots on Ground</button>
+  <button class="filter-btn" data-filter="high">High Impact</button>
+  <button class="filter-btn" data-filter="med">Medium Impact</button>
+</div>
+
+<main class="main">
+  <div class="columns" id="columns">
+    <div class="column" id="col-virtual">
+      <div class="column-header">
+        <h2>Virtual &amp; Cowork</h2>
+        <span class="col-badge teal">Remote</span>
+      </div>
+      <div id="cards-virtual"></div>
+    </div>
+    <div class="column" id="col-boots">
+      <div class="column-header">
+        <h2>Boots on Ground</h2>
+        <span class="col-badge orange">Field</span>
+      </div>
+      <div id="cards-boots"></div>
+    </div>
+  </div>
+</main>
+
+<script>
+const CARDS = [
+  // ── VIRTUAL ─────────────────────────────────────────────────
+  {
+    id: 'V-01',
+    title: 'Activate Google AdSense',
+    subtitle: 'Immediate passive revenue on existing traffic — zero new features needed',
+    type: 'virtual',
+    impact: 'high',
+    time: '1–2 days',
+    phase: 1,
+    phaseLabel: 'Phase 1 — Week 1–2 · Flip the Switch',
+    how: 'Sign up at adsense.google.com → get auto-ads snippet → add to WordPress via Site Kit by Google plugin. Target listing pages + Beego Docs blog posts for highest CPM.',
+    steps: [
+      'Sign up at adsense.google.com with beegojm.com',
+      'Install Site Kit plugin in WordPress dashboard',
+      'Connect AdSense and enable Auto Ads',
+      'Exclude homepage hero zone to keep UX clean',
+      'Monitor weekly via AdSense dashboard',
+    ],
+    revenue: 'JM$30–80K/mo depending on traffic volume',
+  },
+  {
+    id: 'V-02',
+    title: 'Enable paid listing boost for private sellers',
+    subtitle: 'One-click upsell at point of ad submission — impulse purchase',
+    type: 'virtual',
+    impact: 'high',
+    time: '3–5 days',
+    phase: 1,
+    phaseLabel: 'Phase 1 — Week 1–2 · Flip the Switch',
+    how: 'Beego runs on the Adifier WP classified theme which has built-in pricing packages. Enable 3 tiers: Free / Featured (JM$1,500) / Premium (JM$3,000). Integrate WooCommerce + Lynk or NCB PayLink for JM$ payments.',
+    steps: [
+      'Adifier dashboard → Pricing Packages → create 3 tiers',
+      'Set featured = top of search + gold badge on listing card',
+      'Enable WooCommerce on post-an-ad flow',
+      'Connect Lynk or PayPal for payment processing',
+      'Add "Sell 3x faster — feature your listing" copy on submit page',
+    ],
+    revenue: 'JM$50–150K/mo at modest conversion',
+  },
+  {
+    id: 'V-03',
+    title: 'Build Dealer Package landing page + CRM intake',
+    subtitle: 'The anchor revenue product — also the leave-behind for in-person dealer visits',
+    type: 'virtual',
+    impact: 'high',
+    time: '1 week',
+    phase: 1,
+    phaseLabel: 'Phase 1 — Week 1–2 · Flip the Switch',
+    how: 'Tiers: Basic — Free (5 listings) · Standard JM$12,000/mo (25 listings + lead emails) · Premium JM$28,000/mo (unlimited + featured placement + WhatsApp leads + analytics).',
+    steps: [
+      'Design /dealers page with pricing table + "Why Beego" stats',
+      'Add lead capture form → connect to HubSpot free CRM',
+      'Set up recurring billing via WooCommerce Subscriptions',
+      'Export as a one-page PDF for field use',
+    ],
+    revenue: 'JM$240–560K/mo at just 10–20 paying dealers',
+  },
+  {
+    id: 'V-04',
+    title: 'Insurance referral widget on every listing page',
+    subtitle: 'Every car sold needs insurance — capture that referral fee at moment of purchase intent',
+    type: 'virtual',
+    impact: 'high',
+    time: '1 week',
+    phase: 2,
+    phaseLabel: 'Phase 2 — Week 3–6 · Referral Engine',
+    how: 'Add a sidebar widget to single listing pages: "Ready to insure this car?" Simple form: Name + phone + car details (auto-populated from listing). Email lead to insurance partner. Negotiate JM$500–2,000 per lead or % of first-year premium. Partners: Sagicor General, JN General, Guardian General.',
+    steps: [
+      'Build sidebar widget in WordPress with Contact Form 7',
+      'Auto-fill make/model/year from listing post meta',
+      'Route submissions to partner email + internal CRM',
+      'Track conversion rate — optimize placement after 2 weeks',
+    ],
+    revenue: 'JM$500–2,000 per converted lead',
+  },
+  {
+    id: 'V-05',
+    title: 'Build "Beego Deal Rating" badge on all listings',
+    subtitle: 'The single biggest trust & differentiation feature — makes Beego the smart layer above classifieds',
+    type: 'virtual',
+    impact: 'high',
+    time: '2–3 weeks',
+    phase: 2,
+    phaseLabel: 'Phase 2 — Week 3–6 · Referral Engine',
+    how: 'Query existing listing data by make/model/year to compute median asking prices. Compare each listing to the median. Assign: Great Deal (10%+ below median) / Fair Price / High Price. Display badge on every listing card and detail page. Tech: Lightweight PHP/WP function that stamps a custom meta field, or a nightly Python script via cron that processes all active listings via WP REST API.',
+    steps: [
+      'Query DB for median price per make/model/year group',
+      'Compute % delta vs median for each listing',
+      'Stamp custom meta field: great_deal / fair / high_price',
+      'Display badge on listing cards and detail pages',
+      'Schedule nightly refresh via cron',
+    ],
+    revenue: 'Indirect — drives traffic, trust & future B2B data revenue',
+  },
+  {
+    id: 'V-06',
+    title: 'WhatsApp Business API lead delivery for Premium dealers',
+    subtitle: 'Jamaica runs on WhatsApp. WA leads are a Premium-tier exclusive dealers will pay up for.',
+    type: 'virtual',
+    impact: 'med',
+    time: '3–5 days',
+    phase: 2,
+    phaseLabel: 'Phase 2 — Week 3–6 · Referral Engine',
+    how: 'Use Twilio WhatsApp API (or 360dialog). On "Contact Dealer" click, POST to Twilio → sends formatted WA message to dealer\'s registered number with buyer name, phone, and listing link. Standard tier gets email only; Premium gets instant WA.',
+    steps: [
+      'Sign up for Twilio — test with sandbox (free)',
+      'Add WP hook on Contact Dealer form submit',
+      'POST buyer details to Twilio WhatsApp endpoint',
+      'Register as Premium-only feature in tier documentation',
+    ],
+    revenue: 'Tier differentiator — converts Standard dealers to Premium',
+  },
+  {
+    id: 'V-07',
+    title: 'Weekly email newsletter to buyer subscriber base',
+    subtitle: 'New listings alert + Beego Docs tips — builds an audience asset advertisers will pay for',
+    type: 'virtual',
+    impact: 'med',
+    time: '1 week',
+    phase: 2,
+    phaseLabel: 'Phase 2 — Week 3–6 · Referral Engine',
+    how: 'Install MailPoet WP plugin (free up to 1,000 subscribers). Set up automated weekly digest: top 10 new listings + 1 maintenance or buying tip from Beego Docs. Add homepage subscribe popup. Monetize: Once list hits 500+ subscribers, sell Newsletter Feature spots to dealers or insurance partners at JM$5,000–15,000 per edition slot.',
+    steps: [
+      'Install MailPoet plugin in WordPress',
+      'Create weekly automated digest template',
+      'Add subscribe popup on homepage',
+      'Pitch sponsor slots once list reaches 500 subscribers',
+    ],
+    revenue: 'JM$5–20K per sponsor slot once list grows',
+  },
+  {
+    id: 'V-08',
+    title: 'SEO overhaul — rank for every make/model/parish keyword',
+    subtitle: '"Toyota Camry for sale Jamaica" and "SUV Kingston" should lead to Beego',
+    type: 'virtual',
+    impact: 'med',
+    time: 'Ongoing',
+    phase: 3,
+    phaseLabel: 'Phase 3 — Month 2–3 · Scale & Data',
+    how: 'Install Rank Math SEO plugin. Auto-generate title/meta for each listing: "[Year] [Make] [Model] for sale in [Parish] — Beego Jamaica." Create static pillar pages for top searches.',
+    steps: [
+      'Submit XML sitemap to Google Search Console immediately',
+      'Fix generic meta titles on all listing pages',
+      'Create "Cars for sale in [Parish]" landing pages for all 14 parishes',
+      'Add Vehicle schema markup to listing pages',
+      'Target long-tail: "2018 Toyota Vitz for sale Kingston"',
+    ],
+    revenue: 'Every 1,000 new organic visitors = ~JM$15–40K in ad revenue',
+  },
+  {
+    id: 'V-09',
+    title: 'Car loan calculator + financing referral widget',
+    subtitle: 'Second biggest referral opportunity after insurance — pre-fills from listing price',
+    type: 'virtual',
+    impact: 'low',
+    time: '2–3 weeks',
+    phase: 3,
+    phaseLabel: 'Phase 3 — Month 2–3 · Scale & Data',
+    how: 'Add "Calculate your monthly payment" widget on listing pages with pre-filled car price. Show estimated monthly at standard Jamaican bank rates (NCB, Scotiabank JA, JN Bank). CTA: "Apply for financing" routes to a partner lead form. Partners: NCB, Scotiabank Jamaica, JN Bank, VM Wealth — target JM$1,000–3,000 per qualified application.',
+    steps: [
+      'Build calculator widget with pre-filled listing price',
+      'Use standard Jamaican bank rate assumptions (18–24% pa)',
+      'Add "Apply for financing" CTA below calculator',
+      'Route applications to partner lead form',
+    ],
+    revenue: 'JM$1,000–3,000 per qualified loan referral',
+  },
+  {
+    id: 'V-10',
+    title: 'Dealer analytics dashboard (Premium tier lock-in feature)',
+    subtitle: 'Show dealers their ROI — this is what keeps them from cancelling',
+    type: 'virtual',
+    impact: 'low',
+    time: '3–4 weeks',
+    phase: 3,
+    phaseLabel: 'Phase 3 — Month 2–3 · Scale & Data',
+    how: 'Track listing page views per dealer via Google Analytics custom events or a lightweight DB counter. Build a simple WP dashboard page: listings live, total views this month, leads received, Deal Ratings of their inventory. A dealer who can see "my Premium listing got 47 views and 9 leads this month" will never cancel.',
+    steps: [
+      'Instrument listing pages with per-dealer view events',
+      'Aggregate monthly stats to dealer record in DB',
+      'Build /dealer-dashboard WP page showing live + historical data',
+      'Gate access to Premium-tier dealers only',
+    ],
+    revenue: 'Retention play — reduces churn on dealer subscriptions',
+  },
+
+  // ── BOOTS ON GROUND ──────────────────────────────────────────
+  {
+    id: 'F-01',
+    title: 'Dealer blitz — Kingston & St. Andrew used car lots',
+    subtitle: 'Walk in, demo the platform, close 5 paying dealers in Week 1',
+    type: 'boots',
+    impact: 'high',
+    time: 'Week 1',
+    phase: 1,
+    phaseLabel: 'Phase 1 — Week 1–2 · First Dollars',
+    how: 'Target used car lots along Maxfield Ave, Washington Blvd, Portmore — Jamaica\'s highest-density dealer corridors. Bring a tablet showing the /dealers landing page and a printed one-pager. Pitch: "Your inventory is already being searched on Beego. Buyers see your cars but can\'t reach you unless you\'re on Premium. For JM$12,000/month — less than one detail job — every buyer who clicks gets your number and a WhatsApp message hits your phone instantly."',
+    steps: [
+      'Map top 30 dealers in Kingston on Google Maps — build a driving route',
+      'Print 30 one-page pitch sheets with pricing + QR to /dealers page',
+      'Visit 5–8 lots per day over 3–4 days',
+      'Target: 5 signed LOIs in Week 1, 15 by end of Month 1',
+      'Offer 60-day free trial for first 10 dealers who sign an LOI',
+    ],
+    revenue: '5 dealers × JM$12K = JM$60K/mo guaranteed recurring from Week 3',
+  },
+  {
+    id: 'F-02',
+    title: 'Insurance partnership meeting — Sagicor or JN General',
+    subtitle: 'One signed referral agreement = ongoing commission on every car sold through Beego',
+    type: 'boots',
+    impact: 'high',
+    time: 'Week 1–2',
+    phase: 1,
+    phaseLabel: 'Phase 1 — Week 1–2 · First Dollars',
+    how: 'Target digital marketing or broker partnership teams at Sagicor General, JN General Insurance, Guardian General — not general sales. Email first to set a meeting. Pitch: "Every person who buys a car through Beego needs motor insurance within days. We put your brand in front of thousands of active buyers at the exact moment of purchase." Ask: JM$500–1,500 per qualified lead, or % of first-year premium. Offer 6-month exclusivity as a negotiating chip.',
+    steps: [
+      'Research direct contacts at Sagicor, JN General, Guardian General',
+      'Send intro email to digital/broker partnership team leads',
+      'Prepare 2-page deck: traffic stats + referral lead quality',
+      'Negotiate JM$500–1,500 per lead or first-year premium %',
+      'Sign a 6-month exclusivity to secure best rate',
+    ],
+    revenue: '50 referrals/mo × JM$1,000 = JM$50K/mo passive',
+  },
+  {
+    id: 'F-03',
+    title: 'Bank financing referral partnership — NCB or JN Bank',
+    subtitle: 'Car loans are the second mandatory purchase — position Beego as the digital referral channel',
+    type: 'boots',
+    impact: 'high',
+    time: 'Week 2–4',
+    phase: 2,
+    phaseLabel: 'Phase 2 — Week 3–6 · Expand & Partner',
+    how: 'NCB has a structured broker/referral program. JN Bank actively promotes vehicle financing with a digital-first mandate. Target their auto loans or digital partnerships team. Pitch: "We send you pre-qualified, in-market buyers actively viewing a specific vehicle. Listing price, make, model, and year are attached to the lead." Target JM$1,500–3,000 per submitted financing application or flat fee per funded loan.',
+    steps: [
+      'Identify NCB auto loans manager + JN Bank digital partnerships contact',
+      'Pitch with sample lead format: make, model, year, price, buyer phone',
+      'Negotiate JM$1,500–3,000 per application submitted',
+      'Build lead routing flow on Beego listing pages',
+    ],
+    revenue: '20 funded loans/mo × JM$2,500 = JM$50K/mo',
+  },
+  {
+    id: 'F-04',
+    title: 'Dealer blitz Round 2 — Montego Bay & St. Catherine',
+    subtitle: 'MoBay is Jamaica\'s second market. St. Cath corridor has high-volume highway dealers.',
+    type: 'boots',
+    impact: 'med',
+    time: 'Week 4–6',
+    phase: 2,
+    phaseLabel: 'Phase 2 — Week 3–6 · Expand & Partner',
+    how: 'By Week 4 you have Kingston dealer results as social proof. "Dealer X got 47 leads last month for JM$12K. Here\'s their screenshot." That\'s the pitch in MoBay — not a cold ask. Corridors: Portmore strip + Spanish Town Road in St. Catherine. Barnett St. and Harbour St. areas in Montego Bay.',
+    steps: [
+      'Pull Kingston dealer results as case study material',
+      'Map MoBay and St. Cath dealer corridors on Google Maps',
+      'Print updated one-pager with real Kingston stats',
+      'Target 10 additional dealers signed within 3 weeks',
+    ],
+    revenue: '10 additional dealers = JM$120–280K/mo additional recurring',
+  },
+  {
+    id: 'F-05',
+    title: 'Trusted mechanic network — "Beego Certified Inspector" program',
+    subtitle: 'Buyers need pre-purchase inspections. Mechanics need customers. Beego becomes the trust layer.',
+    type: 'boots',
+    impact: 'med',
+    time: 'Month 2',
+    phase: 2,
+    phaseLabel: 'Phase 2 — Week 3–6 · Expand & Partner',
+    how: 'Partner with 5–10 trusted mechanics in Kingston, MoBay, and St. Catherine. Feature them as "Beego Certified" on site. Every listing gets a "Book a Pre-Purchase Inspection" CTA. Earn JM$500–1,000 referral per booking, or charge mechanics a monthly Certified Partner fee. Visit shops directly — these are owner-operators who make decisions on the spot.',
+    steps: [
+      'Identify 15 reputable mechanics via referral + Google reviews',
+      'Visit shops in person with a 1-page Certified Partner agreement',
+      'Agree on referral fee: JM$500–1,000 per booking or flat monthly fee',
+      'Add "Book Pre-Purchase Inspection" CTA to all listing detail pages',
+      'Launch with 5 Kingston mechanics, expand to MoBay in Month 2',
+    ],
+    revenue: 'JM$500–1,000 per inspection + monthly partner fee',
+  },
+  {
+    id: 'F-06',
+    title: 'Manufacturer display ad deals — Toyota, Honda & Suzuki Jamaica',
+    subtitle: 'New car brands want active used-car buyers. That\'s Beego\'s entire audience.',
+    type: 'boots',
+    impact: 'med',
+    time: 'Month 2',
+    phase: 3,
+    phaseLabel: 'Phase 3 — Month 2–3 · Brand & Scale',
+    how: 'Pitch: "Someone browsing a 2016 Vitz on Beego is exactly one step away from buying a new Yaris if you show them the right offer at the right moment." Format: Direct sponsorship deals — banner + sidebar placements on relevant make/model listing pages + a sponsored "New Cars" section.',
+    steps: [
+      'Pull Google Analytics report — total users + top search terms',
+      'Build a 2-page media kit PDF with traffic stats + ad placements',
+      'Book in-person meetings with marketing managers at local distributors',
+      'Pitch JM$50,000–150,000/month per manufacturer',
+      'Start with Toyota (highest used-car search volume in Jamaica)',
+    ],
+    revenue: 'JM$50–150K/mo per manufacturer sponsor',
+  },
+  {
+    id: 'F-07',
+    title: 'Dealer Association partnership — become the official digital platform',
+    subtitle: 'One association deal = dozens of dealers. The shortcut to B2B scale.',
+    type: 'boots',
+    impact: 'med',
+    time: 'Month 2–3',
+    phase: 3,
+    phaseLabel: 'Phase 3 — Month 2–3 · Brand & Scale',
+    how: 'Contact the Jamaica Used Car Dealers Association or equivalent trade group. Propose a group rate: members get Standard tier at JM$8,000/mo (vs. regular JM$12,000) in exchange for endorsed partnership + mention in their communications. An endorsed recommendation from the trade association converts faster than cold B2B sales.',
+    steps: [
+      'Identify Jamaica Used Car Dealers Association leadership',
+      'Pitch group rate: JM$8,000/mo for all members (33% discount)',
+      'Ask for endorsement + mention in newsletter and WhatsApp group',
+      'Set up bulk onboarding flow for member dealers',
+    ],
+    revenue: '20 members × JM$8K = JM$160K/mo from a single deal',
+  },
+  {
+    id: 'F-08',
+    title: 'Caribbean expansion recon — Trinidad & Tobago',
+    subtitle: 'English-speaking, high car ownership, no dominant digital marketplace. Natural first move.',
+    type: 'boots',
+    impact: 'low',
+    time: 'Month 3+',
+    phase: 3,
+    phaseLabel: 'Phase 3 — Month 2–3 · Brand & Scale',
+    how: 'Before building anything, spend 2–3 days in Port of Spain. Visit used car lots, talk to dealers, map the classifieds landscape (CarSeek TT, Classifieds.tt). Understand insurance and financing players. Validate: Is the used car market fragmented? Do dealers have the same pain points? What\'s WhatsApp usage among buyers?',
+    steps: [
+      'Map TT classifieds landscape: CarSeek TT, Classifieds.tt, Facebook Marketplace',
+      'Visit 10–15 used car lots in Port of Spain and San Fernando',
+      'Interview 5 dealers: pain points, current digital spend, WhatsApp habits',
+      'Identify insurance and financing referral partners',
+      'Write 3-page expansion brief: market size, competition, investment, revenue potential',
+    ],
+    revenue: 'Unlocks 2–3× addressable Caribbean market',
+  },
+];
+
+// ── RENDER ────────────────────────────────────────────────────────────────────
+
+function escapeHtml(str) {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function renderCards(cards, containerId) {
+  const container = document.getElementById(containerId);
+  let currentPhase = null;
+  let html = '';
+
+  cards.forEach(card => {
+    if (card.phaseLabel !== currentPhase) {
+      currentPhase = card.phaseLabel;
+      html += `<div class="phase-label">${escapeHtml(card.phaseLabel)}</div>`;
+    }
+
+    const stepsHtml = card.steps.map(s => `<li>${escapeHtml(s)}</li>`).join('');
+
+    html += `
+      <div class="card" data-id="${escapeHtml(card.id)}" data-type="${card.type}" data-impact="${card.impact}" tabindex="0" role="button" aria-expanded="false">
+        <div class="card-header">
+          <div class="card-top">
+            <span class="card-id">${escapeHtml(card.id)}</span>
+            <span class="card-title">${escapeHtml(card.title)}</span>
+            <div class="card-meta">
+              <span class="time-pill">${escapeHtml(card.time)}</span>
+              <span class="expand-icon">+</span>
+            </div>
+          </div>
+          <div class="card-subtitle">${escapeHtml(card.subtitle)}</div>
+        </div>
+        <div class="card-body">
+          <div class="card-body-inner">
+            <div>
+              <div class="detail-label">How</div>
+              <p class="how-text">${escapeHtml(card.how)}</p>
+            </div>
+            <div>
+              <div class="detail-label">Steps</div>
+              <ul class="steps-list">${stepsHtml}</ul>
+            </div>
+            <span class="revenue-pill">${escapeHtml(card.revenue)}</span>
+          </div>
+        </div>
+      </div>`;
+  });
+
+  container.innerHTML = html;
+}
+
+const virtualCards = CARDS.filter(c => c.type === 'virtual');
+const bootsCards   = CARDS.filter(c => c.type === 'boots');
+
+renderCards(virtualCards, 'cards-virtual');
+renderCards(bootsCards,   'cards-boots');
+
+// ── CARD TOGGLE ───────────────────────────────────────────────────────────────
+
+document.addEventListener('click', e => {
+  const header = e.target.closest('.card-header');
+  if (!header) return;
+  const card = header.closest('.card');
+  const expanded = card.classList.toggle('expanded');
+  card.setAttribute('aria-expanded', expanded);
+});
+
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Enter' && e.key !== ' ') return;
+  const card = e.target.closest('.card');
+  if (!card) return;
+  e.preventDefault();
+  const expanded = card.classList.toggle('expanded');
+  card.setAttribute('aria-expanded', expanded);
+});
+
+// ── FILTERS ───────────────────────────────────────────────────────────────────
+
+const filterBtns = document.querySelectorAll('.filter-btn');
+const columns    = document.getElementById('columns');
+const colVirtual = document.getElementById('col-virtual');
+const colBoots   = document.getElementById('col-boots');
+
+filterBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    filterBtns.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    applyFilter(btn.dataset.filter);
+  });
+});
+
+function applyFilter(filter) {
+  const allCards = document.querySelectorAll('.card');
+
+  allCards.forEach(card => {
+    const type   = card.dataset.type;
+    const impact = card.dataset.impact;
+    let visible = false;
+
+    if (filter === 'all')     visible = true;
+    else if (filter === 'virtual') visible = type === 'virtual';
+    else if (filter === 'boots')   visible = type === 'boots';
+    else if (filter === 'high')    visible = impact === 'high';
+    else if (filter === 'med')     visible = impact === 'med';
+
+    card.classList.toggle('hidden', !visible);
+  });
+
+  // Column collapse logic
+  if (filter === 'virtual') {
+    colVirtual.classList.remove('hidden');
+    colBoots.classList.add('hidden');
+    columns.style.gridTemplateColumns = '1fr';
+  } else if (filter === 'boots') {
+    colVirtual.classList.add('hidden');
+    colBoots.classList.remove('hidden');
+    columns.style.gridTemplateColumns = '1fr';
+  } else {
+    colVirtual.classList.remove('hidden');
+    colBoots.classList.remove('hidden');
+    columns.style.gridTemplateColumns = '';
+  }
+
+  // Hide phase labels that have no visible cards below them
+  document.querySelectorAll('.phase-label').forEach(label => {
+    let next = label.nextElementSibling;
+    let hasVisible = false;
+    while (next && !next.classList.contains('phase-label')) {
+      if (!next.classList.contains('hidden')) { hasVisible = true; break; }
+      next = next.nextElementSibling;
+    }
+    label.style.display = hasVisible ? '' : 'none';
+  });
+}
+</script>
+</body>
+</html>
