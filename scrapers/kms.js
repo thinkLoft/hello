@@ -4,6 +4,7 @@ const db = require('../models');
 const { nullCheck } = require('../services/validator');
 
 async function scrape(pageUrl) {
+  const stats = { source: 'kms', scraped: 0, saved: 0, skipped: 0, failed: 0, startedAt: new Date() };
   try {
     const response = await axios.get(pageUrl);
     const $ = cheerio.load(response.data);
@@ -13,11 +14,20 @@ async function scrape(pageUrl) {
     });
     for (const url of links) {
       const exists = await db.Cars.exists({ url });
-      if (!exists) await scrapeDetail(url);
+      if (exists) {
+        stats.skipped++;
+      } else {
+        stats.scraped++;
+        const saved = await scrapeDetail(url);
+        if (saved) stats.saved++;
+        else stats.failed++;
+      }
     }
   } catch (err) {
     console.error('KMS scrape error:', err.message);
+    stats.failed++;
   }
+  return stats;
 }
 
 async function scrapeDetail(srcURL) {
@@ -32,7 +42,7 @@ async function scrapeDetail(srcURL) {
       if (src) imgs.push(src);
     });
 
-    await nullCheck({
+    return await nullCheck({
       user: 'kms',
       url: srcURL,
       price: $('span[itemprop="price"]').text().replace(/[^0-9.-]+/g, '').trim(),
@@ -50,6 +60,7 @@ async function scrapeDetail(srcURL) {
     });
   } catch (err) {
     console.error('KMS detail error:', err.message);
+    return false;
   }
 }
 

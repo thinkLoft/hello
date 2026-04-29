@@ -22,12 +22,17 @@ const carSchema = new Schema(
     date: { type: String },
     user: { type: String },
     comments: { type: String },
+    score:          { type: Number, default: null },
+    scoreBreakdown: { type: Object, default: null },
+    anomalyFlags:   { type: [String], default: [] },
+    priceband:      { type: String, default: null },
   },
   { timestamps: true }
 );
 
 carSchema.index({ posted: 1, price: 1, year: 1 });
 carSchema.index({ make: 1, model: 1, year: 1 });
+carSchema.index({ score: -1, posted: 1 });
 
 const Cars = mongoose.model('Cars', carSchema);
 

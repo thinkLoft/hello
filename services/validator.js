@@ -176,18 +176,24 @@ async function nullCheck(x) {
     res.comments += `Body type fuzzy-matched to ${res.bodyType}. `;
   }
 
-  await saveToDb(res);
+  const saved = await saveToDb(res);
 
   if (res.posted) {
     const { mailerConditions } = require('./mailer');
     mailerConditions(res);
   }
+
+  return saved;
 }
 
 async function saveToDb(result) {
-  db.Cars.create(result).catch((err) => {
+  try {
+    await db.Cars.create(result);
+    return true;
+  } catch (err) {
     if (err.code !== 11000) console.error('DB create error:', err.message);
-  });
+    return false;
+  }
 }
 
 module.exports = { nullCheck, makeCheck, contactCheck, loadMakeDb };

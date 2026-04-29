@@ -6,6 +6,7 @@ const { nullCheck } = require('../services/validator');
 const HEADERS = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' };
 
 async function checker(siteUrl) {
+  const stats = { source: 'autoadsja', scraped: 0, saved: 0, skipped: 0, failed: 0, startedAt: new Date() };
   try {
     const response = await axios.get(siteUrl, { headers: HEADERS });
     const $ = cheerio.load(response.data, { xmlMode: true });
@@ -13,11 +14,20 @@ async function checker(siteUrl) {
     $('item').each((i, el) => urls.push($(el).children('link').text()));
     for (const url of urls) {
       const exists = await db.Cars.exists({ url });
-      if (!exists) await scrape(url);
+      if (exists) {
+        stats.skipped++;
+      } else {
+        stats.scraped++;
+        const saved = await scrape(url);
+        if (saved) stats.saved++;
+        else stats.failed++;
+      }
     }
   } catch (err) {
     console.error('AutoAds checker error:', err.message);
+    stats.failed++;
   }
+  return stats;
 }
 
 async function scrape(link) {
@@ -46,7 +56,7 @@ async function scrape(link) {
     // Contact: href="tel:18761234567"
     const contactNumber = $('.contact_details a[href^="tel:"]').attr('href')?.replace(/[^0-9]/g, '') ?? null;
 
-    await nullCheck({
+    return await nullCheck({
       user: 'autoadsja',
       url: response.config.url,
       price,
@@ -63,6 +73,7 @@ async function scrape(link) {
     });
   } catch (err) {
     console.error('AutoAds scraper error:', err.message);
+    return false;
   }
 }
 

@@ -13,6 +13,7 @@ const ATTR_MAP = {
 };
 
 async function scrape(pageUrl) {
+  const stats = { source: 'jamaicaonlineclassifieds', scraped: 0, saved: 0, skipped: 0, failed: 0, startedAt: new Date() };
   try {
     const response = await axios.get(pageUrl);
     const $ = cheerio.load(response.data);
@@ -25,11 +26,20 @@ async function scrape(pageUrl) {
     });
     for (const url of links) {
       const exists = await db.Cars.exists({ url });
-      if (!exists) await scrapeDetail(url);
+      if (exists) {
+        stats.skipped++;
+      } else {
+        stats.scraped++;
+        const saved = await scrapeDetail(url);
+        if (saved) stats.saved++;
+        else stats.failed++;
+      }
     }
   } catch (err) {
     console.error('JCO scrape error:', err.message);
+    stats.failed++;
   }
+  return stats;
 }
 
 async function scrapeDetail(srcURL) {
@@ -69,9 +79,10 @@ async function scrapeDetail(srcURL) {
     const imgs = [];
     $('a.item-images').each((i, el) => imgs.push($(el).attr('href')));
 
-    await nullCheck({ user: 'jamaicaonlineclassifieds', url: srcURL, imgs, ...attr });
+    return await nullCheck({ user: 'jamaicaonlineclassifieds', url: srcURL, imgs, ...attr });
   } catch (err) {
     console.error('JCO detail error:', err.message);
+    return false;
   }
 }
 

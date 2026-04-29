@@ -9,6 +9,7 @@ const path = require('path');
 
 const carRoutes = require('./routes/cars');
 const authRoutes = require('./routes/auth');
+const statsRoutes = require('./routes/api/stats');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -53,6 +54,7 @@ app.get('/health', (req, res) => {
 });
 
 app.use('/api/auth', authRoutes);
+app.use('/api', statsRoutes);
 app.use('/api', carRoutes);
 
 if (process.env.NODE_ENV === 'production') {
