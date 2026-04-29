@@ -34,6 +34,7 @@ export const triggerRescore = () =>
   apiFetch('/scoring/run', { method: 'POST' });
 
 export const fetchScraperStats = () => apiFetch('/scraper-stats');
+export const fetchScraperRuns = (source) => apiFetch(`/scraper-runs?source=${encodeURIComponent(source)}`);
 export const fetchScoringWeights = () => apiFetch('/scoring-weights');
 export const updateScoringWeights = (weights) =>
   apiFetch('/scoring-weights', {

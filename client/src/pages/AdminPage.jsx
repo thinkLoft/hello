@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
   fetchScraperStats,
+  fetchScraperRuns,
   fetchScoringWeights,
   updateScoringWeights,
   triggerRescore,
@@ -42,6 +43,9 @@ export default function AdminPage() {
   // Scraper stats
   const [scraperStats, setScraperStats] = useState(null);
   const [scraperStatsError, setScraperStatsError] = useState('');
+  const [expandedSource, setExpandedSource] = useState(null);
+  const [runsCache, setRunsCache] = useState({});
+  const [runsLoading, setRunsLoading] = useState(false);
 
   // Bulk rescore
   const [rescoreLoading, setRescoreLoading] = useState(false);
@@ -144,6 +148,21 @@ export default function AdminPage() {
     }
   };
 
+  const handleToggleRuns = async (source) => {
+    if (expandedSource === source) { setExpandedSource(null); return; }
+    setExpandedSource(source);
+    if (runsCache[source]) return;
+    setRunsLoading(true);
+    try {
+      const runs = await fetchScraperRuns(source);
+      setRunsCache((c) => ({ ...c, [source]: runs }));
+    } catch {
+      setRunsCache((c) => ({ ...c, [source]: [] }));
+    } finally {
+      setRunsLoading(false);
+    }
+  };
+
   return (
     <div className="admin-page">
       <div className="admin-container">
@@ -221,14 +240,62 @@ export default function AdminPage() {
                 <span>Failed</span>
               </div>
               {scraperStats.map((s) => (
-                <div key={s.source} className="scraper-stats-row">
-                  <span className="scraper-source">{s.source}</span>
-                  <span className="scraper-date">{formatDate(s.lastRun)}</span>
-                  <span>{s.scraped}</span>
-                  <span className="stat-saved">{s.saved}</span>
-                  <span className="stat-skipped">{s.skipped}</span>
-                  <span className={s.failed > 0 ? 'stat-failed' : ''}>{s.failed}</span>
-                </div>
+                <React.Fragment key={s.source}>
+                  <div
+                    className="scraper-stats-row scraper-stats-row--clickable"
+                    onClick={() => handleToggleRuns(s.source)}
+                    title="Click to view run history"
+                  >
+                    <span className="scraper-source">
+                      {expandedSource === s.source ? '▾' : '▸'} {s.source}
+                    </span>
+                    <span className="scraper-date">{formatDate(s.lastRun)}</span>
+                    <span>{s.scraped}</span>
+                    <span className="stat-saved">{s.saved}</span>
+                    <span className="stat-skipped">{s.skipped}</span>
+                    <span className={s.failed > 0 ? 'stat-failed' : ''}>{s.failed}</span>
+                  </div>
+                  {expandedSource === s.source && (
+                    <div className="scraper-runs-panel">
+                      {runsLoading && !runsCache[s.source] ? (
+                        <p className="admin-muted">Loading run history…</p>
+                      ) : (runsCache[s.source] ?? []).length === 0 ? (
+                        <p className="admin-muted">No run history recorded.</p>
+                      ) : (
+                        <div className="scraper-runs-table">
+                          <div className="scraper-runs-row scraper-runs-header">
+                            <span>Started</span>
+                            <span>Duration</span>
+                            <span>Scraped</span>
+                            <span>Saved</span>
+                            <span>Skipped</span>
+                            <span>Failed</span>
+                          </div>
+                          {(runsCache[s.source] ?? []).map((r) => {
+                            const durationMs = r.finishedAt && r.startedAt
+                              ? new Date(r.finishedAt) - new Date(r.startedAt)
+                              : null;
+                            const duration = durationMs != null
+                              ? durationMs < 60000
+                                ? `${Math.round(durationMs / 1000)}s`
+                                : `${Math.round(durationMs / 60000)}m`
+                              : '—';
+                            return (
+                              <div key={r._id} className="scraper-runs-row">
+                                <span>{formatDate(r.startedAt)}</span>
+                                <span>{duration}</span>
+                                <span>{r.scraped}</span>
+                                <span className="stat-saved">{r.saved}</span>
+                                <span className="stat-skipped">{r.skipped}</span>
+                                <span className={r.failed > 0 ? 'stat-failed' : ''}>{r.failed}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </React.Fragment>
               ))}
             </div>
           )}

@@ -259,6 +259,47 @@
 .stat-skipped { color: var(--color-text-secondary); }
 .stat-failed  { color: #dc2626; font-weight: 600; }
 
+.scraper-stats-row--clickable {
+  cursor: pointer;
+  user-select: none;
+}
+
+.scraper-runs-panel {
+  background: color-mix(in srgb, var(--color-bg) 60%, var(--color-surface));
+  border-left: 3px solid var(--color-primary);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  padding: 0.5rem 0.75rem 0.75rem;
+  margin-bottom: 0.25rem;
+}
+
+.scraper-runs-table {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.8rem;
+}
+
+.scraper-runs-row {
+  display: grid;
+  grid-template-columns: 1.8fr 0.8fr repeat(4, 1fr);
+  gap: 0.5rem;
+  align-items: center;
+  padding: 0.3rem 0.5rem;
+  border-radius: calc(var(--radius) / 2);
+}
+
+.scraper-runs-header {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-secondary);
+}
+
+.scraper-runs-row:not(.scraper-runs-header) {
+  background: var(--color-bg);
+}
+
 /* Scoring weights */
 .weight-row {
   display: flex;

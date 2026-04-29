@@ -50,6 +50,20 @@ router.patch('/scoring-weights', requireAdmin, async (req, res) => {
   }
 });
 
+router.get('/scraper-runs', requireAdmin, async (req, res) => {
+  try {
+    const { source } = req.query;
+    const filter = source ? { source } : {};
+    const runs = await db.ScraperRun.find(filter)
+      .sort({ startedAt: -1 })
+      .limit(25)
+      .lean();
+    res.json(runs);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.post('/scoring/run', requireAdmin, async (req, res) => {
   try {
     const scored = await runScoringBatch();
