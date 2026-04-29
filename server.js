@@ -19,8 +19,9 @@ app.use(cors({ credentials: true, origin: process.env.NODE_ENV === 'production' 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
-const SessionStore = require('express-session').MemoryStore;
-const sessionStore = new SessionStore();
+const sessionStore = process.env.NODE_ENV === 'production'
+  ? MongoStore.create({ mongoUrl: process.env.MONGODB_URI, ttl: 86400 })
+  : new (require('express-session').MemoryStore)();
 
 app.use(
   session({
@@ -37,14 +38,8 @@ app.use(
   })
 );
 
-// Serve built frontend — works both locally (client/dist) and on server (public/)
-const frontendDist = process.env.NODE_ENV === 'production'
-  ? path.join(__dirname, 'public')
-  : path.join(__dirname, 'client/dist');
-
-if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(frontendDist));
-}
+const frontendDist = path.join(__dirname, 'client/dist');
+app.use(express.static(frontendDist));
 
 // Health endpoint — always responds even when DB is down
 app.get('/health', async (req, res) => {
