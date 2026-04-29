@@ -43,7 +43,7 @@ async function scrapeDetail(srcURL) {
 
     const imgs = [];
     $('ul.slides > li > img').each((i, el) => {
-      const src = $(el).attr('src')?.trim();
+      const src = ($(el).attr('data-full-image') || $(el).attr('src'))?.trim();
       if (src) imgs.push(src);
     });
 
