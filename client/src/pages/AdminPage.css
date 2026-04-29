@@ -189,3 +189,118 @@
   opacity: 0.7;
   cursor: not-allowed;
 }
+
+.admin-muted {
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+  margin: 0;
+}
+
+/* Scraper stats table */
+.scraper-stats-table {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.875rem;
+  overflow-x: auto;
+}
+
+.scraper-stats-row {
+  display: grid;
+  grid-template-columns: 1.8fr 1.6fr repeat(4, 1fr);
+  gap: 0.5rem;
+  align-items: center;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius);
+}
+
+.scraper-stats-header {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-secondary);
+  padding-bottom: 0.25rem;
+}
+
+.scraper-stats-row:not(.scraper-stats-header) {
+  background: var(--color-bg);
+}
+
+.scraper-stats-row:not(.scraper-stats-header):hover {
+  background: color-mix(in srgb, var(--color-primary) 6%, var(--color-bg));
+}
+
+.scraper-source {
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.scraper-date {
+  color: var(--color-text-secondary);
+}
+
+.stat-saved  { color: #16a34a; font-weight: 600; }
+.stat-skipped { color: var(--color-text-secondary); }
+.stat-failed  { color: #dc2626; font-weight: 600; }
+
+/* Scoring weights */
+.weight-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.weight-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.weight-input-group {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.weight-slider {
+  flex: 1;
+  accent-color: var(--color-primary);
+  cursor: pointer;
+}
+
+.weight-number {
+  width: 4rem;
+  padding: 0.4rem 0.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  font-size: 0.9rem;
+  text-align: center;
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+.weight-number:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+.weight-total {
+  font-size: 0.875rem;
+  font-weight: 700;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius);
+  text-align: right;
+}
+
+.weight-total--valid {
+  background: #f0fdf4;
+  color: #16a34a;
+}
+
+.weight-total--invalid {
+  background: #fff7ed;
+  color: #c2410c;
+}

@@ -19,3 +19,12 @@ export const fetchPriceData = (yearUpper, yearLower, make, model) =>
 
 export const markAsSold = (id) =>
   apiFetch(`/cars/${id}`, { method: 'PATCH' });
+
+export const fetchScraperStats = () => apiFetch('/scraper-stats');
+export const fetchScoringWeights = () => apiFetch('/scoring-weights');
+export const updateScoringWeights = (weights) =>
+  apiFetch('/scoring-weights', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(weights),
+  });
