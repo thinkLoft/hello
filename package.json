@@ -7,7 +7,7 @@
     "start": "node server.js",
     "dev": "nodemon server.js",
     "build": "cd client && npm run build",
-    "heroku-postbuild": "cd client && npm install && npm run build",
+    "heroku-postbuild": "cd client && npm install --include=dev && npm run build",
     "install:all": "npm install && cd client && npm install"
   },
   "engines": {
