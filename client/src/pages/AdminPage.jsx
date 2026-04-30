@@ -74,6 +74,11 @@ export default function AdminPage() {
   // Memory log
   const [memLog, setMemLog] = useState([]);
 
+  // Push JaCars/JCO to prod
+  const [pushing, setPushing] = useState(false);
+  const [pushResult, setPushResult] = useState(null);
+  const [pushError, setPushError] = useState('');
+
   // Scoring weights
   const [weights, setWeights] = useState(null);
   const [weightsLoading, setWeightsLoading] = useState(true);
@@ -186,6 +191,25 @@ export default function AdminPage() {
       setRefreshError(err.message);
     } finally {
       setRefreshLoading(false);
+    }
+  };
+
+  const handlePushToProd = async () => {
+    setPushing(true);
+    setPushResult(null);
+    setPushError('');
+    try {
+      const res = await fetch('/api/scrape/push-to-prod', { method: 'POST', credentials: 'include' });
+      if (!res.ok) {
+        const err = await res.json();
+        setPushError(err.error || 'Failed to start push');
+        return;
+      }
+      setPushResult('Started — check server terminal for progress logs');
+      setTimeout(() => setPushing(false), 30000);
+    } catch (err) {
+      setPushError(err.message);
+      setPushing(false);
     }
   };
 
@@ -349,6 +373,25 @@ export default function AdminPage() {
             </div>
           )}
         </div>
+
+        {/* Push to Prod — local only */}
+        {window.location.hostname === 'localhost' && (
+        <div className="admin-card">
+          <h2>Push JaCars / JCO → Prod</h2>
+          <p className="admin-muted" style={{ marginBottom: '1rem' }}>
+            Runs JaCars and JCO scrapers locally (Puppeteer on your machine) and writes results directly to the prod Atlas DB. Skipped on Heroku — button only appears on localhost.
+          </p>
+          {pushError && <div className="admin-error" style={{ marginBottom: '0.75rem' }}>{pushError}</div>}
+          {pushResult && <div className="admin-success" style={{ marginBottom: '0.75rem' }}>{pushResult}</div>}
+          <button
+            className="admin-submit-btn"
+            onClick={handlePushToProd}
+            disabled={pushing}
+          >
+            {pushing ? 'Running… (check server logs)' : 'Push JaCars / JCO → Prod'}
+          </button>
+        </div>
+        )}
 
         {/* Memory Usage */}
         <div className="admin-card">

@@ -1,5 +1,7 @@
 const express = require('express');
 const router = express.Router();
+const { spawn } = require('child_process');
+const path = require('path');
 const db = require('../../models');
 const { requireAdmin } = require('../auth');
 const { DEFAULT_WEIGHTS, runScoringBatch } = require('../../services/scoringService');
@@ -89,6 +91,23 @@ router.post('/scoring/run', requireAdmin, async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
+});
+
+router.post('/scrape/push-to-prod', requireAdmin, (req, res) => {
+  if (process.env.NODE_ENV === 'production') return res.status(404).end();
+  if (!process.env.PROD_MONGODB_URI) {
+    return res.status(500).json({ error: 'PROD_MONGODB_URI not set in .env' });
+  }
+
+  const env = { ...process.env, MONGODB_URI: process.env.PROD_MONGODB_URI };
+  const script = path.join(__dirname, '../../scripts/pushToProd.js');
+  const child = spawn(process.execPath, [script], { env });
+
+  child.stdout.on('data', d => console.log('[pushToProd]', d.toString().trim()));
+  child.stderr.on('data', d => console.error('[pushToProd]', d.toString().trim()));
+  child.on('exit', code => console.log(`[pushToProd] exited with code ${code}`));
+
+  res.json({ started: true });
 });
 
 module.exports = router;

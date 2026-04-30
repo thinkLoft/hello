@@ -38,18 +38,23 @@ const job = new CronJob(
       fetchMissingContacts(),
     ]);
 
-    // Phase 2: Puppeteer scrapers run sequentially with browser closed between them
-    const jacarsResult = await jacarsScrape().then(
-      (v) => ({ status: 'fulfilled', value: v }),
-      (e) => { console.error('[JaCars] error:', e.message); return { status: 'rejected' }; }
-    );
-    await closeBrowser();
+    // Phase 2: Puppeteer scrapers — skipped unless ENABLE_PUPPETEER=true (not set on Heroku Basic)
+    const puppeteerEnabled = process.env.ENABLE_PUPPETEER === 'true';
+    const jacarsResult = puppeteerEnabled
+      ? await jacarsScrape().then(
+          (v) => ({ status: 'fulfilled', value: v }),
+          (e) => { console.error('[JaCars] error:', e.message); return { status: 'rejected' }; }
+        )
+      : { status: 'skipped' };
+    if (puppeteerEnabled) await closeBrowser();
 
-    const jcoResult = await jcoScrape(process.env.SITE3).then(
-      (v) => ({ status: 'fulfilled', value: v }),
-      (e) => { console.error('[JCO] error:', e.message); return { status: 'rejected' }; }
-    );
-    await closeBrowser();
+    const jcoResult = puppeteerEnabled
+      ? await jcoScrape(process.env.SITE3).then(
+          (v) => ({ status: 'fulfilled', value: v }),
+          (e) => { console.error('[JCO] error:', e.message); return { status: 'rejected' }; }
+        )
+      : { status: 'skipped' };
+    if (puppeteerEnabled) await closeBrowser();
 
     const results = [...phase1, jacarsResult, jcoResult];
 
