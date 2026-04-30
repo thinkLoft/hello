@@ -18,7 +18,12 @@ const ATTR_MAP = {
 
 // Sitemap discovery works via axios; detail pages need Puppeteer (Cloudflare-protected).
 async function scrape() {
-  const stats = { source: 'jacars', scraped: 0, saved: 0, skipped: 0, failed: 0, startedAt: new Date() };
+  const stats = {
+    source: 'jacars',
+    scraped: 0, saved: 0, skipped: 0, failed: 0,
+    rejected: 0, rejectionReasons: {}, failedUrls: [],
+    startedAt: new Date(),
+  };
   const seenUrls = [];
   try {
     const response = await axios.get('https://www.jacars.net/sitemap-advert.xml', { timeout: 15000 });
@@ -35,9 +40,19 @@ async function scrape() {
         stats.skipped++;
       } else {
         stats.scraped++;
-        const saved = await scrapeDetail(url);
-        if (saved) stats.saved++;
-        else stats.failed++;
+        const result = await scrapeDetail(url);
+        if (result?.failed) {
+          stats.failed++;
+          stats.failedUrls.push({ url, reason: result.reason });
+        } else if (result?.saved) {
+          stats.saved++;
+          if (!result.posted) stats.rejected++;
+          for (const c of result.codes || []) {
+            stats.rejectionReasons[c] = (stats.rejectionReasons[c] || 0) + 1;
+          }
+        } else {
+          stats.failed++;
+        }
       }
     }
     if (seenUrls.length > 0) {
@@ -75,7 +90,6 @@ async function scrapeDetail(srcURL) {
       const src = $(el).attr('src')?.trim();
       if (src && !imgs.includes(src)) imgs.push(src);
     });
-    if (imgs.length === 0) console.warn(`[jacars] no images found at ${srcURL}`);
 
     return await nullCheck({
       user: 'jacars',
@@ -94,7 +108,7 @@ async function scrapeDetail(srcURL) {
     });
   } catch (err) {
     console.error('JaCars detail error:', err.message);
-    return false;
+    return { failed: true, reason: err.message };
   }
 }
 

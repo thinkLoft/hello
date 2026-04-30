@@ -4,7 +4,12 @@ const db = require('../models');
 const { nullCheck } = require('../services/validator');
 
 async function scrape(pageUrl) {
-  const stats = { source: 'kms', scraped: 0, saved: 0, skipped: 0, failed: 0, startedAt: new Date() };
+  const stats = {
+    source: 'kms',
+    scraped: 0, saved: 0, skipped: 0, failed: 0,
+    rejected: 0, rejectionReasons: {}, failedUrls: [],
+    startedAt: new Date(),
+  };
   const seenUrls = [];
   try {
     const response = await axios.get(pageUrl);
@@ -20,9 +25,19 @@ async function scrape(pageUrl) {
         stats.skipped++;
       } else {
         stats.scraped++;
-        const saved = await scrapeDetail(url);
-        if (saved) stats.saved++;
-        else stats.failed++;
+        const result = await scrapeDetail(url);
+        if (result?.failed) {
+          stats.failed++;
+          stats.failedUrls.push({ url, reason: result.reason });
+        } else if (result?.saved) {
+          stats.saved++;
+          if (!result.posted) stats.rejected++;
+          for (const c of result.codes || []) {
+            stats.rejectionReasons[c] = (stats.rejectionReasons[c] || 0) + 1;
+          }
+        } else {
+          stats.failed++;
+        }
       }
     }
     if (seenUrls.length > 0) {
@@ -65,7 +80,7 @@ async function scrapeDetail(srcURL) {
     });
   } catch (err) {
     console.error('KMS detail error:', err.message);
-    return false;
+    return { failed: true, reason: err.message };
   }
 }
 

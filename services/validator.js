@@ -57,6 +57,7 @@ function contactCheck(contactNumber) {
   return parseInt(num, 10) < 10000000 ? `1876${num}` : num;
 }
 
+// Returns { saved: boolean, posted: boolean, codes: string[] }
 async function nullCheck(x) {
   const res = {
     ...x,
@@ -64,29 +65,34 @@ async function nullCheck(x) {
     posted: true,
     date: new Date().toISOString().slice(0, 10).replace(/-/g, ''),
   };
+  const codes = [];
 
   // Mileage: normalize empty string/undefined to null
   res.mileage = (res.mileage && String(res.mileage).trim()) || null;
 
-  // Image check
+  // Image check — strict gate
   if (!res.imgs?.length) {
     res.comments += 'No images. ';
     res.posted = false;
+    codes.push('noImages');
   }
 
   // Price check
   if (!res.price) {
     res.comments += 'No price. ';
     res.price = 0;
+    codes.push('noPrice');
   } else if (parseInt(res.price) < 100000 || res.price > 30000000) {
     res.comments += `Price out of range: $${res.price}. `;
     res.price = 0;
+    codes.push('priceOutOfRange');
   }
 
-  // Make check
+  // Make check — strict gate
   if (!res.make) {
     res.comments += 'No make. ';
     res.posted = false;
+    codes.push('noMake');
   } else {
     const normalized = makeCheck(res.make);
     if (carDB.includes(normalized.toUpperCase()) && normalized !== 'Alfa Romeo') {
@@ -95,31 +101,37 @@ async function nullCheck(x) {
       res.posted = false;
       const suggestion = carDB.length ? closest(res.make, carDB) : 'Unknown';
       res.comments += `Bad Make: ${res.make} (closest: ${suggestion}). `;
+      codes.push('badMake');
     }
   }
 
-  // Model check
+  // Model check — strict gate
   if (!res.model) {
     res.comments += 'No model. ';
     res.posted = false;
+    codes.push('noModel');
   }
 
-  // Year check
+  // Year check — strict gate
   if (!res.year) {
     res.comments += 'No year. ';
     res.posted = false;
+    codes.push('noYear');
   } else if (isNaN(res.year)) {
     res.comments += 'Year is not a number. ';
     res.posted = false;
+    codes.push('badYear');
   } else if (Number(res.year) <= 1935 || Number(res.year) >= currentYear + 1) {
     res.comments += `Year out of range: ${res.year}. `;
     res.posted = false;
+    codes.push('yearOutOfRange');
   }
 
-  // Parish check
+  // Parish check — soft gate: default instead of reject
   if (!res.parish) {
-    res.comments += 'No parish. ';
-    res.posted = false;
+    res.comments += 'No parish. Default to Kingston/St. Andrew. ';
+    res.parish = 'Kingston/St. Andrew';
+    codes.push('noParishDefaulted');
   } else if (res.parish.startsWith('Saint Andrew') || res.parish.startsWith('Kingston')) {
     res.parish = 'Kingston/St. Andrew';
   } else if (res.parish.startsWith('OutsideJamaica')) {
@@ -129,8 +141,9 @@ async function nullCheck(x) {
   } else if (res.parish.startsWith('St ')) {
     res.parish = res.parish.replace(/St /g, 'St. ');
   } else if (!VALID_PARISHES.includes(res.parish) && !res.parish.startsWith('St.')) {
-    res.comments += `${res.parish}: Bad Parish. `;
-    res.posted = false;
+    res.comments += `${res.parish}: Bad parish. Default to Kingston/St. Andrew. `;
+    res.parish = 'Kingston/St. Andrew';
+    codes.push('badParishDefaulted');
   }
 
   // Driver side check
@@ -143,10 +156,11 @@ async function nullCheck(x) {
     res.driverSide = 'Right Hand Drive';
   }
 
-  // Transmission check
+  // Transmission check — soft gate: default instead of reject
   if (!res.transmission) {
     res.comments += 'No transmission. Default to Automatic. ';
     res.transmission = 'Automatic';
+    codes.push('noTransmissionDefaulted');
   } else if (res.transmission.toLowerCase().includes('manual')) {
     res.transmission = 'Manual';
   } else if (
@@ -155,8 +169,9 @@ async function nullCheck(x) {
   ) {
     res.transmission = 'Automatic';
   } else {
-    res.comments += `${res.transmission}: bad transmission. `;
-    res.posted = false;
+    res.comments += `${res.transmission}: bad transmission. Default to Automatic. `;
+    res.transmission = 'Automatic';
+    codes.push('badTransmissionDefaulted');
   }
 
   // Contact number check
@@ -164,19 +179,22 @@ async function nullCheck(x) {
     res.comments += `bad contact: ${res.contactNumber}. `;
   }
 
-  // Body type check
+  // Body type check — soft gate: default Sedan instead of reject
   if (!res.bodyType) {
-    res.comments += 'No body type. ';
-    res.posted = false;
+    res.comments += 'No body type. Default to Sedan. ';
+    res.bodyType = 'Sedan';
+    codes.push('noBodyTypeDefaulted');
   } else if (BODY_TYPES.includes(res.bodyType.toUpperCase())) {
     res.bodyType = res.bodyType.charAt(0).toUpperCase() + res.bodyType.slice(1).toLowerCase();
   } else if (BODY_TYPE_ALIASES[res.bodyType]) {
     res.comments += `${res.bodyType} <- body type normalized. `;
     res.bodyType = BODY_TYPE_ALIASES[res.bodyType];
+    codes.push('bodyTypeAliased');
   } else {
     const normalized = BODY_TYPES.map((b) => b.charAt(0) + b.slice(1).toLowerCase());
     res.bodyType = closest(res.bodyType, normalized);
     res.comments += `Body type fuzzy-matched to ${res.bodyType}. `;
+    codes.push('bodyTypeFuzzy');
   }
 
   const saved = await saveToDb(res);
@@ -186,7 +204,7 @@ async function nullCheck(x) {
     mailerConditions(res);
   }
 
-  return saved;
+  return { saved, posted: res.posted, codes };
 }
 
 async function saveToDb(result) {

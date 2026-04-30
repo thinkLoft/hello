@@ -222,7 +222,7 @@
 
 .scraper-stats-row {
   display: grid;
-  grid-template-columns: 1.8fr 1.6fr repeat(5, 1fr);
+  grid-template-columns: 1.8fr 1.6fr repeat(6, 1fr);
   gap: 0.5rem;
   align-items: center;
   padding: 0.5rem 0.75rem;
@@ -281,7 +281,7 @@
 
 .scraper-runs-row {
   display: grid;
-  grid-template-columns: 1.8fr 0.8fr repeat(4, 1fr);
+  grid-template-columns: 1.8fr 0.8fr repeat(5, 1fr);
   gap: 0.5rem;
   align-items: center;
   padding: 0.3rem 0.5rem;

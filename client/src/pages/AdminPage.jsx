@@ -4,6 +4,9 @@ import { useAuth } from '../context/AuthContext';
 import {
   fetchScraperStats,
   fetchScraperRuns,
+  fetchFailedUrls,
+  fetchRejections,
+  triggerScrape,
   fetchScoringWeights,
   updateScoringWeights,
   triggerRescore,
@@ -73,6 +76,19 @@ export default function AdminPage() {
 
   // Memory log
   const [memLog, setMemLog] = useState([]);
+
+  // Manual scraper triggers (keyed by source)
+  const [runNowLoading, setRunNowLoading] = useState({});
+  const [runNowResult, setRunNowResult] = useState({});
+  const [runNowError, setRunNowError] = useState({});
+
+  // Rejection histograms (keyed by source)
+  const [rejectionsData, setRejectionsData] = useState({});
+  const [rejectionsLoading, setRejectionsLoading] = useState({});
+
+  // Failed URL drilldown (keyed by run _id)
+  const [failedUrlsData, setFailedUrlsData] = useState({});
+  const [failedUrlsLoading, setFailedUrlsLoading] = useState({});
 
   // Push JaCars/JCO to prod
   const [pushing, setPushing] = useState(false);
@@ -213,6 +229,55 @@ export default function AdminPage() {
     }
   };
 
+  const handleRunNow = async (source) => {
+    setRunNowLoading((p) => ({ ...p, [source]: true }));
+    setRunNowResult((p) => ({ ...p, [source]: null }));
+    setRunNowError((p) => ({ ...p, [source]: '' }));
+    try {
+      const res = await triggerScrape(source);
+      setRunNowResult((p) => ({ ...p, [source]: res.stats }));
+      // Refresh stats table and bust the runs cache so new run appears
+      fetchScraperStats().then(setScraperStats).catch(() => {});
+      setRunsCache((c) => { const next = { ...c }; delete next[source]; return next; });
+    } catch (err) {
+      setRunNowError((p) => ({ ...p, [source]: err.message }));
+    } finally {
+      setRunNowLoading((p) => ({ ...p, [source]: false }));
+    }
+  };
+
+  const handleViewRejections = async (source) => {
+    if (rejectionsData[source]) {
+      setRejectionsData((p) => { const next = { ...p }; delete next[source]; return next; });
+      return;
+    }
+    setRejectionsLoading((p) => ({ ...p, [source]: true }));
+    try {
+      const data = await fetchRejections(source, 72);
+      setRejectionsData((p) => ({ ...p, [source]: data }));
+    } catch {
+      setRejectionsData((p) => ({ ...p, [source]: { byCode: {}, byComment: {} } }));
+    } finally {
+      setRejectionsLoading((p) => ({ ...p, [source]: false }));
+    }
+  };
+
+  const handleToggleFailedUrls = async (runId) => {
+    if (failedUrlsData[runId]) {
+      setFailedUrlsData((p) => { const next = { ...p }; delete next[runId]; return next; });
+      return;
+    }
+    setFailedUrlsLoading((p) => ({ ...p, [runId]: true }));
+    try {
+      const data = await fetchFailedUrls(runId);
+      setFailedUrlsData((p) => ({ ...p, [runId]: data.failedUrls || [] }));
+    } catch {
+      setFailedUrlsData((p) => ({ ...p, [runId]: [] }));
+    } finally {
+      setFailedUrlsLoading((p) => ({ ...p, [runId]: false }));
+    }
+  };
+
   const handleToggleRuns = async (source) => {
     if (expandedSource === source) { setExpandedSource(null); return; }
     setExpandedSource(source);
@@ -310,6 +375,7 @@ export default function AdminPage() {
                 <span>Saved</span>
                 <span>Skipped</span>
                 <span>Failed</span>
+                <span>Rejected</span>
               </div>
               {scraperStats.map((s) => (
                 <React.Fragment key={s.source}>
@@ -327,9 +393,61 @@ export default function AdminPage() {
                     <span className="stat-saved">{s.saved}</span>
                     <span className="stat-skipped">{s.skipped}</span>
                     <span className={s.failed > 0 ? 'stat-failed' : ''}>{s.failed}</span>
+                    <span className={s.rejected > 0 ? 'stat-skipped' : ''}>{s.rejected ?? 0}</span>
                   </div>
                   {expandedSource === s.source && (
                     <div className="scraper-runs-panel">
+                      {/* Run Now controls */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem', flexWrap: 'wrap' }}>
+                        <button
+                          className="admin-submit-btn"
+                          style={{ padding: '0.35rem 0.9rem', fontSize: '0.8rem', marginTop: 0 }}
+                          onClick={(e) => { e.stopPropagation(); handleRunNow(s.source); }}
+                          disabled={runNowLoading[s.source]}
+                        >
+                          {runNowLoading[s.source] ? 'Running…' : 'Run Now'}
+                        </button>
+                        <button
+                          className="admin-submit-btn"
+                          style={{ padding: '0.35rem 0.9rem', fontSize: '0.8rem', marginTop: 0, background: 'var(--border, #374151)' }}
+                          onClick={(e) => { e.stopPropagation(); handleViewRejections(s.source); }}
+                          disabled={rejectionsLoading[s.source]}
+                        >
+                          {rejectionsLoading[s.source] ? 'Loading…' : rejectionsData[s.source] ? 'Hide Rejections' : 'View Rejections (72h)'}
+                        </button>
+                      </div>
+                      {runNowError[s.source] && (
+                        <div className="admin-error" style={{ marginBottom: '0.5rem' }}>{runNowError[s.source]}</div>
+                      )}
+                      {runNowResult[s.source] && (() => {
+                        const r = runNowResult[s.source];
+                        return (
+                          <div className="admin-success" style={{ marginBottom: '0.75rem', fontSize: '0.8rem' }}>
+                            Done — scraped {r.scraped}, saved {r.saved}, skipped {r.skipped}, failed {r.failed}, rejected {r.rejected ?? 0}
+                          </div>
+                        );
+                      })()}
+
+                      {/* Rejection histogram */}
+                      {rejectionsData[s.source] && (() => {
+                        const { byCode } = rejectionsData[s.source];
+                        const entries = Object.entries(byCode).sort((a, b) => b[1] - a[1]);
+                        return entries.length === 0 ? (
+                          <p className="admin-muted" style={{ fontSize: '0.8rem', marginBottom: '0.75rem' }}>No rejections in last 72h.</p>
+                        ) : (
+                          <div style={{ marginBottom: '0.75rem', background: 'rgba(0,0,0,0.15)', borderRadius: '6px', padding: '0.6rem 0.75rem' }}>
+                            <p style={{ fontSize: '0.75rem', fontWeight: 600, marginBottom: '0.4rem', opacity: 0.7 }}>Rejection reasons (72h)</p>
+                            {entries.map(([code, count]) => (
+                              <div key={code} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', padding: '0.15rem 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                                <span style={{ opacity: 0.85 }}>{code}</span>
+                                <span style={{ fontWeight: 600 }}>{count}</span>
+                              </div>
+                            ))}
+                          </div>
+                        );
+                      })()}
+
+                      {/* Run history table */}
                       {runsLoading && !runsCache[s.source] ? (
                         <p className="admin-muted">Loading run history…</p>
                       ) : (runsCache[s.source] ?? []).length === 0 ? (
@@ -343,6 +461,7 @@ export default function AdminPage() {
                             <span>Saved</span>
                             <span>Skipped</span>
                             <span>Failed</span>
+                            <span>Rejected</span>
                           </div>
                           {(runsCache[s.source] ?? []).map((r) => {
                             const durationMs = r.finishedAt && r.startedAt
@@ -353,15 +472,42 @@ export default function AdminPage() {
                                 ? `${Math.round(durationMs / 1000)}s`
                                 : `${Math.round(durationMs / 60000)}m`
                               : '—';
+                            const hasFailed = r.failed > 0;
                             return (
-                              <div key={r._id} className="scraper-runs-row">
-                                <span>{formatDate(r.startedAt)}</span>
-                                <span>{duration}</span>
-                                <span>{r.scraped}</span>
-                                <span className="stat-saved">{r.saved}</span>
-                                <span className="stat-skipped">{r.skipped}</span>
-                                <span className={r.failed > 0 ? 'stat-failed' : ''}>{r.failed}</span>
-                              </div>
+                              <React.Fragment key={r._id}>
+                                <div className="scraper-runs-row">
+                                  <span>{formatDate(r.startedAt)}</span>
+                                  <span>{duration}</span>
+                                  <span>{r.scraped}</span>
+                                  <span className="stat-saved">{r.saved}</span>
+                                  <span className="stat-skipped">{r.skipped}</span>
+                                  <span
+                                    className={hasFailed ? 'stat-failed' : ''}
+                                    style={hasFailed ? { cursor: 'pointer', textDecoration: 'underline dotted' } : {}}
+                                    title={hasFailed ? 'Click to view failed URLs' : undefined}
+                                    onClick={hasFailed ? (e) => { e.stopPropagation(); handleToggleFailedUrls(r._id); } : undefined}
+                                  >
+                                    {hasFailed ? (failedUrlsData[r._id] ? '▾' : '▸') : ''} {r.failed}
+                                  </span>
+                                  <span className={r.rejected > 0 ? 'stat-skipped' : ''}>{r.rejected ?? 0}</span>
+                                </div>
+                                {failedUrlsData[r._id] && (
+                                  <div style={{ gridColumn: '1 / -1', background: 'rgba(220,38,38,0.08)', borderRadius: '4px', padding: '0.5rem 0.75rem', marginBottom: '0.25rem' }}>
+                                    {failedUrlsLoading[r._id] ? (
+                                      <p className="admin-muted" style={{ fontSize: '0.78rem' }}>Loading…</p>
+                                    ) : failedUrlsData[r._id].length === 0 ? (
+                                      <p className="admin-muted" style={{ fontSize: '0.78rem' }}>No failed URL details stored.</p>
+                                    ) : (
+                                      failedUrlsData[r._id].map((f, i) => (
+                                        <div key={i} style={{ fontSize: '0.75rem', padding: '0.2rem 0', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                                          <a href={f.url} target="_blank" rel="noreferrer" style={{ color: 'var(--accent, #60a5fa)', wordBreak: 'break-all', flex: 1 }}>{f.url}</a>
+                                          <span style={{ opacity: 0.7, whiteSpace: 'nowrap' }}>{f.reason}</span>
+                                        </div>
+                                      ))
+                                    )}
+                                  </div>
+                                )}
+                              </React.Fragment>
                             );
                           })}
                         </div>

@@ -6,6 +6,17 @@ const db = require('../../models');
 const { requireAdmin } = require('../auth');
 const { DEFAULT_WEIGHTS, runScoringBatch } = require('../../services/scoringService');
 const { refreshListings } = require('../../jobs/refreshListings');
+const { persistScraperStats } = require('../../jobs/persistScraperStats');
+const { closeBrowser } = require('../../scrapers/browser');
+
+const SCRAPER_REGISTRY = {
+  autoadsja:               () => require('../../scrapers/autoads').checker(process.env.SITE1),
+  kms:                     () => require('../../scrapers/kms').scrape(process.env.SITE4),
+  jacars:                  () => require('../../scrapers/jacars').scrape(),
+  jamaicaonlineclassifieds:() => require('../../scrapers/jco').scrape(process.env.SITE3),
+};
+
+const PUPPETEER_SOURCES = new Set(['jacars', 'jamaicaonlineclassifieds']);
 
 router.get('/scraper-stats', requireAdmin, async (req, res) => {
   try {
@@ -71,6 +82,73 @@ router.get('/scraper-runs', requireAdmin, async (req, res) => {
       .lean();
     res.json(runs);
   } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/scraper-runs/:id/failed-urls', requireAdmin, async (req, res) => {
+  try {
+    const run = await db.ScraperRun.findById(req.params.id).lean();
+    if (!run) return res.status(404).json({ error: 'Not found' });
+    res.json({ source: run.source, startedAt: run.startedAt, failedUrls: run.failedUrls || [] });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/scraper-rejections', requireAdmin, async (req, res) => {
+  try {
+    const { source } = req.query;
+    const hours = Math.min(parseInt(req.query.hours) || 24, 24 * 30);
+    const cutoff = new Date(Date.now() - hours * 3600 * 1000);
+    const match = { posted: false, lastSeenAt: { $gte: cutoff } };
+    if (source) match.user = source;
+
+    const byCommentRaw = await db.Cars.aggregate([
+      { $match: match },
+      { $project: { codes: { $split: ['$comments', '. '] } } },
+      { $unwind: '$codes' },
+      { $match: { codes: { $ne: '' } } },
+      { $group: { _id: '$codes', count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+    ]);
+
+    const runMatch = { startedAt: { $gte: cutoff } };
+    if (source) runMatch.source = source;
+    const recentRuns = await db.ScraperRun.find(runMatch).lean();
+    const byCode = {};
+    for (const r of recentRuns) {
+      for (const [k, v] of Object.entries(r.rejectionReasons || {})) {
+        byCode[k] = (byCode[k] || 0) + v;
+      }
+    }
+
+    res.json({
+      byCode,
+      byComment: Object.fromEntries(byCommentRaw.map(x => [x._id, x.count])),
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Manual scraper trigger — admin-only, dev-friendly alternative to waiting for cron
+router.post('/scrape/run', requireAdmin, async (req, res) => {
+  const { source } = req.query;
+  const fn = SCRAPER_REGISTRY[source];
+  if (!fn) {
+    return res.status(400).json({
+      error: `Unknown source: ${source}`,
+      valid: Object.keys(SCRAPER_REGISTRY),
+    });
+  }
+  try {
+    const stats = await fn();
+    await persistScraperStats(stats);
+    if (PUPPETEER_SOURCES.has(source)) await closeBrowser();
+    res.json({ ok: true, stats });
+  } catch (err) {
+    if (PUPPETEER_SOURCES.has(source)) await closeBrowser().catch(() => {});
     res.status(500).json({ error: err.message });
   }
 });

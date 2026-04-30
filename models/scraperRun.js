@@ -9,6 +9,9 @@ const scraperRunSchema = new Schema({
   saved:      { type: Number, default: 0 },
   skipped:    { type: Number, default: 0 },
   failed:     { type: Number, default: 0 },
+  rejected:         { type: Number, default: 0 },
+  rejectionReasons: { type: Map, of: Number, default: {} },
+  failedUrls:       [{ url: String, reason: String, _id: false }],
 });
 
 // Sort support + TTL auto-expiry after 90 days

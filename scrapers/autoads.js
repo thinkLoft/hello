@@ -6,7 +6,12 @@ const { nullCheck } = require('../services/validator');
 const HEADERS = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' };
 
 async function checker(siteUrl) {
-  const stats = { source: 'autoadsja', scraped: 0, saved: 0, skipped: 0, failed: 0, startedAt: new Date() };
+  const stats = {
+    source: 'autoadsja',
+    scraped: 0, saved: 0, skipped: 0, failed: 0,
+    rejected: 0, rejectionReasons: {}, failedUrls: [],
+    startedAt: new Date(),
+  };
   const seenUrls = [];
   try {
     const response = await axios.get(siteUrl, { headers: HEADERS, timeout: 15000 });
@@ -18,9 +23,19 @@ async function checker(siteUrl) {
         stats.skipped++;
       } else {
         stats.scraped++;
-        const saved = await scrape(url);
-        if (saved) stats.saved++;
-        else stats.failed++;
+        const result = await scrape(url);
+        if (result?.failed) {
+          stats.failed++;
+          stats.failedUrls.push({ url, reason: result.reason });
+        } else if (result?.saved) {
+          stats.saved++;
+          if (!result.posted) stats.rejected++;
+          for (const c of result.codes || []) {
+            stats.rejectionReasons[c] = (stats.rejectionReasons[c] || 0) + 1;
+          }
+        } else {
+          stats.failed++;
+        }
       }
     }
     if (seenUrls.length > 0) {
@@ -79,7 +94,7 @@ async function scrape(link) {
     });
   } catch (err) {
     console.error('AutoAds scraper error:', err.message);
-    return false;
+    return { failed: true, reason: err.message };
   }
 }
 

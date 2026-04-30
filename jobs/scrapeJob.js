@@ -6,24 +6,10 @@ const { scrape: kmsScrape } = require('../scrapers/kms');
 const { fetchMissingContacts } = require('../scrapers/contacts');
 const { closeBrowser } = require('../scrapers/browser');
 const { refreshListings } = require('./refreshListings');
-const db = require('../models');
+const { persistScraperStats } = require('./persistScraperStats');
 const { runScoringBatch } = require('../services/scoringService');
 
 let tickCount = 0;
-
-async function persistScraperStats(stats) {
-  if (!stats?.source) return;
-  const { source, startedAt, scraped, saved, skipped, failed } = stats;
-  const finishedAt = new Date();
-  await Promise.all([
-    db.ScraperStats.findOneAndUpdate(
-      { source },
-      { $set: { lastRun: finishedAt, scraped, saved, skipped, failed } },
-      { upsert: true, new: true }
-    ),
-    db.ScraperRun.create({ source, startedAt, finishedAt, scraped, saved, skipped, failed }),
-  ]);
-}
 
 const job = new CronJob(
   '0 */15 * * * *',

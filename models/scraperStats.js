@@ -8,7 +8,8 @@ const scraperStatsSchema = new Schema(
     scraped: { type: Number, default: 0 },
     saved:   { type: Number, default: 0 },
     skipped: { type: Number, default: 0 },
-    failed:  { type: Number, default: 0 },
+    failed:   { type: Number, default: 0 },
+    rejected: { type: Number, default: 0 },
   },
   { timestamps: true }
 );

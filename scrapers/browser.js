@@ -37,8 +37,11 @@ async function fetchPage(url, { waitSelector, timeout = 20000 } = {}) {
     await page.setExtraHTTPHeaders({ 'Accept-Language': 'en-US,en;q=0.9' });
     await page.goto(url, { waitUntil: 'domcontentloaded', timeout });
     if (waitSelector) {
-      const found = await page.waitForSelector(waitSelector, { timeout: 8000 }).then(() => true).catch(() => false);
-      if (!found) console.warn(`[browser] waitSelector "${waitSelector}" timed out on ${url}`);
+      try {
+        await page.waitForSelector(waitSelector, { timeout: 8000 });
+      } catch {
+        throw new Error(`selector_timeout:${waitSelector}`);
+      }
     }
     return await page.content();
   } finally {

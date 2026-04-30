@@ -14,7 +14,12 @@ const ATTR_MAP = {
 };
 
 async function scrape(pageUrl) {
-  const stats = { source: 'jamaicaonlineclassifieds', scraped: 0, saved: 0, skipped: 0, failed: 0, startedAt: new Date() };
+  const stats = {
+    source: 'jamaicaonlineclassifieds',
+    scraped: 0, saved: 0, skipped: 0, failed: 0,
+    rejected: 0, rejectionReasons: {}, failedUrls: [],
+    startedAt: new Date(),
+  };
   const seenUrls = [];
   try {
     const html = await fetchPage(pageUrl, { waitSelector: '.jco-card', timeout: 45000 });
@@ -31,9 +36,19 @@ async function scrape(pageUrl) {
         stats.skipped++;
       } else {
         stats.scraped++;
-        const saved = await scrapeDetail(url);
-        if (saved) stats.saved++;
-        else stats.failed++;
+        const result = await scrapeDetail(url);
+        if (result?.failed) {
+          stats.failed++;
+          stats.failedUrls.push({ url, reason: result.reason });
+        } else if (result?.saved) {
+          stats.saved++;
+          if (!result.posted) stats.rejected++;
+          for (const c of result.codes || []) {
+            stats.rejectionReasons[c] = (stats.rejectionReasons[c] || 0) + 1;
+          }
+        } else {
+          stats.failed++;
+        }
       }
     }
     if (seenUrls.length > 0) {
@@ -60,7 +75,7 @@ async function scrapeDetail(srcURL) {
       html = await fetchPage(srcURL, { waitSelector: 'li.collection-item', timeout: 30000 });
     } catch (err2) {
       console.error('JCO detail error:', err2.message, srcURL);
-      return false;
+      return { failed: true, reason: err2.message };
     }
   }
   try {
@@ -76,7 +91,7 @@ async function scrapeDetail(srcURL) {
       if (ATTR_MAP[subtitle] && val) attr[ATTR_MAP[subtitle]] = val;
     });
 
-    if (!attr.year) return false;
+    if (!attr.year) return { failed: true, reason: 'no_year_in_parsed_html' };
 
     $('div.col.s12.l3.m6.flow-text').each((i, el) => {
       const link = $(el).children('a').attr('href');
@@ -104,7 +119,7 @@ async function scrapeDetail(srcURL) {
     return await nullCheck({ user: 'jamaicaonlineclassifieds', url: srcURL, imgs, ...attr });
   } catch (err) {
     console.error('JCO detail error:', err.message);
-    return false;
+    return { failed: true, reason: err.message };
   }
 }
 
