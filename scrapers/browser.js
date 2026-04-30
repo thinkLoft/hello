@@ -1,11 +1,16 @@
-const puppeteer = require('puppeteer-extra');
-const StealthPlugin = require('puppeteer-extra-plugin-stealth');
-
-puppeteer.use(StealthPlugin());
+let puppeteer = null;
+try {
+  puppeteer = require('puppeteer-extra');
+  const StealthPlugin = require('puppeteer-extra-plugin-stealth');
+  puppeteer.use(StealthPlugin());
+} catch (_) {
+  console.warn('[browser] puppeteer-extra not available — JaCars/JCO scrapers disabled on this host');
+}
 
 let _browser = null;
 
 async function getBrowser() {
+  if (!puppeteer) throw new Error('puppeteer-extra not available on this host');
   if (_browser && _browser.isConnected()) return _browser;
   _browser = await puppeteer.launch({
     headless: 'new',
