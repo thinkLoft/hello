@@ -21,9 +21,8 @@ async function getBrowser() {
       '--disable-gpu',
     ],
   };
-  if (process.env.PUPPETEER_EXECUTABLE_PATH) {
-    launchOpts.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
-  }
+  const chromePath = process.env.PUPPETEER_EXECUTABLE_PATH || process.env.GOOGLE_CHROME_BIN;
+  if (chromePath) launchOpts.executablePath = chromePath;
   _browser = await puppeteer.launch(launchOpts);
   _browser.on('disconnected', () => { _browser = null; });
   return _browser;
