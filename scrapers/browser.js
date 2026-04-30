@@ -12,7 +12,7 @@ let _browser = null;
 async function getBrowser() {
   if (!puppeteer) throw new Error('puppeteer-extra not available on this host');
   if (_browser && _browser.isConnected()) return _browser;
-  _browser = await puppeteer.launch({
+  const launchOpts = {
     headless: 'new',
     args: [
       '--no-sandbox',
@@ -20,7 +20,11 @@ async function getBrowser() {
       '--disable-dev-shm-usage',
       '--disable-gpu',
     ],
-  });
+  };
+  if (process.env.PUPPETEER_EXECUTABLE_PATH) {
+    launchOpts.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
+  }
+  _browser = await puppeteer.launch(launchOpts);
   _browser.on('disconnected', () => { _browser = null; });
   return _browser;
 }
