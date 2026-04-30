@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../../models');
-const { requireAdmin } = require('../../middleware/auth');
+const { requireAdmin } = require('../auth');
 const { DEFAULT_WEIGHTS, runScoringBatch } = require('../../services/scoringService');
 const { refreshListings } = require('../../jobs/refreshListings');
 

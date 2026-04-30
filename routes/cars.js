@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const db = require('../models');
 const { priceCheck } = require('../services/priceAnalysis');
-const { requireAdmin } = require('../middleware/auth');
+const { requireAdmin } = require('./auth');
 const { getPriceBand, scoreListing, getWeights } = require('../services/scoringService');
 
 const currentYear = new Date().getFullYear();
