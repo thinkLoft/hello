@@ -71,6 +71,9 @@ export default function AdminPage() {
   // Revenue plan
   const [showRevenuePlan, setShowRevenuePlan] = useState(false);
 
+  // Memory log
+  const [memLog, setMemLog] = useState([]);
+
   // Scoring weights
   const [weights, setWeights] = useState(null);
   const [weightsLoading, setWeightsLoading] = useState(true);
@@ -87,6 +90,11 @@ export default function AdminPage() {
       .then(setWeights)
       .catch(() => setWeightsError('Could not load weights'))
       .finally(() => setWeightsLoading(false));
+
+    fetch('/api/health/memory', { credentials: 'include' })
+      .then((r) => r.json())
+      .then(setMemLog)
+      .catch(() => {});
   }, []);
 
   const handleLogout = async () => {
@@ -338,6 +346,42 @@ export default function AdminPage() {
                   )}
                 </React.Fragment>
               ))}
+            </div>
+          )}
+        </div>
+
+        {/* Memory Usage */}
+        <div className="admin-card">
+          <h2>Dyno Memory Usage</h2>
+          <p className="admin-muted" style={{ marginBottom: '0.75rem' }}>
+            Sampled every 5 min. Resets on dyno restart. Limit: 512 MB (Basic dyno).
+          </p>
+          {memLog.length === 0 ? (
+            <p className="admin-muted">No samples yet — data appears after the first 5-minute interval.</p>
+          ) : (
+            <div className="scraper-stats-table">
+              <div className="scraper-stats-row scraper-stats-header">
+                <span>Time</span>
+                <span>RSS</span>
+                <span>Heap Used</span>
+                <span>Heap Total</span>
+                <span>Status</span>
+              </div>
+              {[...memLog].reverse().map((m) => {
+                const rss = Math.round(m.rss / 1024 / 1024);
+                const heapUsed = Math.round(m.heapUsed / 1024 / 1024);
+                const heapTotal = Math.round(m.heapTotal / 1024 / 1024);
+                const warn = rss > 420;
+                return (
+                  <div key={m.ts} className="scraper-stats-row" style={warn ? { background: 'rgba(220,38,38,0.08)' } : {}}>
+                    <span className="scraper-date">{formatDate(new Date(m.ts).toISOString())}</span>
+                    <span style={warn ? { color: 'var(--danger, #dc2626)', fontWeight: 600 } : {}}>{rss} MB</span>
+                    <span>{heapUsed} MB</span>
+                    <span>{heapTotal} MB</span>
+                    <span>{warn ? '⚠ High' : '✓ OK'}</span>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>

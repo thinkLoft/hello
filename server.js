@@ -10,9 +10,17 @@ const path = require('path');
 const carRoutes = require('./routes/cars');
 const authRoutes = require('./routes/auth');
 const statsRoutes = require('./routes/api/stats');
+const { requireAdmin } = require('./routes/auth');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+
+const MEM_LOG = [];
+setInterval(() => {
+  const { rss, heapUsed, heapTotal } = process.memoryUsage();
+  MEM_LOG.push({ ts: Date.now(), rss, heapUsed, heapTotal });
+  if (MEM_LOG.length > 288) MEM_LOG.shift();
+}, 5 * 60 * 1000);
 
 app.set('trust proxy', 1);
 app.use(morgan('dev'));
@@ -75,6 +83,8 @@ app.get('/health', async (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api', statsRoutes);
 app.use('/api', carRoutes);
+
+app.get('/api/health/memory', requireAdmin, (req, res) => res.json(MEM_LOG));
 
 if (process.env.NODE_ENV === 'production') {
   app.get('*', (req, res) => {

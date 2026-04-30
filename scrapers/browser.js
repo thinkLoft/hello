@@ -19,6 +19,8 @@ async function getBrowser() {
       '--disable-setuid-sandbox',
       '--disable-dev-shm-usage',
       '--disable-gpu',
+      '--single-process',
+      '--disable-extensions',
     ],
   };
   const chromePath = process.env.PUPPETEER_EXECUTABLE_PATH || process.env.GOOGLE_CHROME_BIN;
@@ -44,4 +46,11 @@ async function fetchPage(url, { waitSelector, timeout = 20000 } = {}) {
   }
 }
 
-module.exports = { fetchPage };
+async function closeBrowser() {
+  if (_browser) {
+    await _browser.close().catch(() => {});
+    _browser = null;
+  }
+}
+
+module.exports = { fetchPage, closeBrowser };

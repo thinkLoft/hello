@@ -4,6 +4,7 @@ const { scrape: jacarsScrape } = require('../scrapers/jacars');
 const { scrape: jcoScrape } = require('../scrapers/jco');
 const { scrape: kmsScrape } = require('../scrapers/kms');
 const { fetchMissingContacts } = require('../scrapers/contacts');
+const { closeBrowser } = require('../scrapers/browser');
 const { refreshListings } = require('./refreshListings');
 const db = require('../models');
 const { runScoringBatch } = require('../services/scoringService');
@@ -29,13 +30,28 @@ const job = new CronJob(
   async function () {
     tickCount++;
     console.log(`[${new Date().toISOString()}] Cron job started (tick ${tickCount})`);
-    const results = await Promise.allSettled([
+
+    // Phase 1: non-Puppeteer scrapers run in parallel
+    const phase1 = await Promise.allSettled([
       autoadsChecker(process.env.SITE1),
-      jacarsScrape(),
-      jcoScrape(process.env.SITE3),
       kmsScrape(process.env.SITE4),
       fetchMissingContacts(),
     ]);
+
+    // Phase 2: Puppeteer scrapers run sequentially with browser closed between them
+    const jacarsResult = await jacarsScrape().then(
+      (v) => ({ status: 'fulfilled', value: v }),
+      (e) => { console.error('[JaCars] error:', e.message); return { status: 'rejected' }; }
+    );
+    await closeBrowser();
+
+    const jcoResult = await jcoScrape(process.env.SITE3).then(
+      (v) => ({ status: 'fulfilled', value: v }),
+      (e) => { console.error('[JCO] error:', e.message); return { status: 'rejected' }; }
+    );
+    await closeBrowser();
+
+    const results = [...phase1, jacarsResult, jcoResult];
 
     for (const result of results) {
       if (result.status === 'fulfilled' && result.value?.source) {
