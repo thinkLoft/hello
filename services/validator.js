@@ -1,10 +1,17 @@
-const axios = require('axios');
+const fs = require('fs');
+const path = require('path');
 const { closest } = require('fastest-levenshtein');
 const db = require('../models');
 const { priceCheck } = require('./priceAnalysis');
 
 const currentYear = new Date().getFullYear();
 let carDB = [];
+try {
+  carDB = JSON.parse(fs.readFileSync(path.join(__dirname, '../data/car-makes.json'), 'utf8'));
+  console.log(`Loaded ${carDB.length} car makes from data/car-makes.json`);
+} catch (_) {
+  console.warn('[validator] data/car-makes.json not found — make validation disabled');
+}
 
 const BODY_TYPES = [
   'SEDAN', 'COUPE', 'VAN', 'CONVERTIBLE', 'PICKUP',
@@ -33,17 +40,9 @@ const VALID_PARISHES = [
   'Clarendon', 'Portland', 'Manchester',
 ];
 
-async function loadMakeDb() {
-  try {
-    const response = await axios.get(
-      'https://vpic.nhtsa.dot.gov/api/vehicles/getallmakes?format=json'
-    );
-    carDB = response.data.Results.map((v) => v.Make_Name);
-    console.log(`Loaded ${carDB.length} car makes from NHTSA`);
-  } catch (err) {
-    console.error('Failed to load make DB:', err.message);
-  }
-}
+// No-op: makes are loaded from data/car-makes.json at module init.
+// Run `node scripts/updateCarMakes.js` to refresh (quarterly).
+async function loadMakeDb() {}
 
 function makeCheck(make) {
   if (make.startsWith('Merc') || make.startsWith('Benz')) return 'Mercedes-Benz';
@@ -95,12 +94,14 @@ async function nullCheck(x) {
     codes.push('noMake');
   } else {
     const normalized = makeCheck(res.make);
-    if (carDB.includes(normalized.toUpperCase()) && normalized !== 'Alfa Romeo') {
+    if (!carDB.length) {
+      res.make = normalized;
+      codes.push('makeUnverified');
+    } else if (carDB.includes(normalized.toUpperCase()) && normalized !== 'Alfa Romeo') {
       res.make = normalized;
     } else {
       res.posted = false;
-      const suggestion = carDB.length ? closest(res.make, carDB) : 'Unknown';
-      res.comments += `Bad Make: ${res.make} (closest: ${suggestion}). `;
+      res.comments += `Bad Make: ${res.make} (closest: ${closest(res.make, carDB)}). `;
       codes.push('badMake');
     }
   }
