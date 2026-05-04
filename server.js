@@ -3,6 +3,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const session = require('express-session');
 const { MongoStore } = require('connect-mongo');
+const helmet = require('helmet');
 const morgan = require('morgan');
 const cors = require('cors');
 const path = require('path');
@@ -23,6 +24,7 @@ setInterval(() => {
 }, 5 * 60 * 1000);
 
 app.set('trust proxy', 1);
+app.use(helmet());
 app.use(morgan('dev'));
 app.use(cors({ credentials: true, origin: process.env.NODE_ENV === 'production' ? false : true }));
 app.use(express.urlencoded({ extended: true }));

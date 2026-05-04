@@ -139,12 +139,12 @@ router.get('/csv', async (req, res) => {
 router.get('/data/:yearUpper/:yearLower/:make/:model', async (req, res) => {
   try {
     const { yearUpper, yearLower, make, model } = req.params;
-    const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
     const docs = await db.Cars.find({
       year: { $lte: Number(yearUpper), $gte: Number(yearLower) },
-      make: capitalize(make),
-      model: capitalize(model),
+      make: { $regex: new RegExp(`^${make.trim()}$`, 'i') },
+      model: { $regex: new RegExp(`^${model.trim()}$`, 'i') },
       price: { $gte: 100000, $lte: 10000000 },
+      posted: true,
     }).sort({ _id: -1 });
     res.json(priceCheck(docs));
   } catch (err) {
