@@ -72,13 +72,20 @@ async function scrapeDetail(srcURL) {
   try {
     const html = await fetchPage(srcURL, { waitSelector: '#ad-title', timeout: 30000 });
     const $ = cheerio.load(html);
-    const titleParts = $('#ad-title').text().trim().split(' ');
+    const titleParts = $('#ad-title').text().trim().split(/\s+/);
     let price = Math.round(
       Number($("meta[itemprop='price']").attr('content')?.replace(/[^0-9.-]+/g, '') || 0)
     );
     if (price < 10000 && price > 100) price *= 1000;
 
-    const attr = { make: titleParts[0], model: titleParts[1] };
+    // Some titles are "2019 Toyota Corolla" (year-first); others are "Toyota Corolla 2019"
+    const isYearFirst = /^(19|20)\d{2}$/.test(titleParts[0]);
+    const makeIdx = isYearFirst ? 1 : 0;
+    const modelIdx = isYearFirst ? 2 : 1;
+    // Capture year from title as fallback if .chars-column selector misses it
+    const yearFromTitle = titleParts.find(p => /^(19|20)\d{2}$/.test(p));
+
+    const attr = { make: titleParts[makeIdx], model: titleParts[modelIdx] };
     $('.chars-column > li').each((i, el) => {
       const subtitle = $(el).children('span').first().text().trim();
       const val = ($(el).children('a').text().trim()) || ($(el).children('span').eq(1).text().trim());
@@ -95,7 +102,7 @@ async function scrapeDetail(srcURL) {
       user: 'jacars',
       url: srcURL,
       price,
-      year: attr.year,
+      year: attr.year || yearFromTitle,
       make: attr.make,
       model: attr.model,
       parish: $('.announcement__location').children('span').text(),
