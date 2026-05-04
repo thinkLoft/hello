@@ -30,6 +30,7 @@ const carSchema = new Schema(
     adminNotes:     { type: String, default: null },
     hidden:         { type: Boolean, default: false },
     lastSeenAt:     { type: Date, default: null },
+    contactReveals: { type: Number, default: 0 },
   },
   { timestamps: true }
 );

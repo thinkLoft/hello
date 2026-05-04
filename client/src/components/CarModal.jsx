@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import './CarModal.css';
 import { useAuth } from '../context/AuthContext';
-import { updateListing, rescoreListing, hideListing } from '../services/api';
+import { updateListing, rescoreListing, hideListing, revealContact } from '../services/api';
 import { scraperName } from '../utils/scraperNames';
+import DealRatingBadge from './DealRatingBadge';
 
 const formatPrice = (price) =>
   new Intl.NumberFormat('en-JM', {
@@ -42,8 +43,7 @@ const SPEC_LABELS = {
   transmission: 'Transmission',
   driverSide: 'Driver Side',
   mileage: 'Mileage',
-  contactNumber: 'Contact',
-  user: 'Author',
+  user: 'Source',
   date: 'Date Listed',
 };
 
@@ -79,6 +79,23 @@ export default function CarModal({ car, onClose, onSold, onUpdate, onHide }) {
 
   const [hideLoading, setHideLoading] = useState(false);
 
+  const [revealedNumber, setRevealedNumber] = useState(null);
+  const [revealLoading, setRevealLoading] = useState(false);
+  const [revealError, setRevealError] = useState(null);
+
+  const handleReveal = async () => {
+    setRevealLoading(true);
+    setRevealError(null);
+    try {
+      const { contactNumber } = await revealContact(car._id);
+      setRevealedNumber(contactNumber);
+    } catch (err) {
+      setRevealError(err.message.includes('429') ? 'Too many requests — try again shortly' : 'Could not load contact info');
+    } finally {
+      setRevealLoading(false);
+    }
+  };
+
   const enterEdit = () => {
     setEditForm({
       price: car.price ?? '',
@@ -90,7 +107,7 @@ export default function CarModal({ car, onClose, onSold, onUpdate, onHide }) {
       bodyType: car.bodyType ?? '',
       transmission: car.transmission ?? '',
       driverSide: car.driverSide ?? '',
-      contactNumber: car.contactNumber ?? '',
+      contactNumber: revealedNumber ?? '',
       description: car.description ?? '',
       adminNotes: car.adminNotes ?? '',
     });
@@ -215,7 +232,10 @@ export default function CarModal({ car, onClose, onSold, onUpdate, onHide }) {
         <div className="modal__content">
           <div className="modal__header">
             <h2 className="modal__title">{car.year} {car.make} {car.model}</h2>
-            <p className="modal__price">{formatPrice(car.price)}</p>
+            <div className="modal__price-row">
+              <p className="modal__price">{formatPrice(car.price)}</p>
+              {car.score != null && <DealRatingBadge score={car.score} size="md" />}
+            </div>
           </div>
 
           <dl className="modal__specs">
@@ -335,17 +355,30 @@ export default function CarModal({ car, onClose, onSold, onUpdate, onHide }) {
                 <div className="modal__sold-banner">✓ Marked as Sold</div>
               ) : (
                 <>
-                  {car.contactNumber && (
+                  {(car.hasContact || car.contactNumber) && !revealedNumber && (
+                    <button
+                      className="modal__btn modal__btn--reveal"
+                      onClick={handleReveal}
+                      disabled={revealLoading}
+                    >
+                      {revealLoading ? 'Loading…' : '📞 Show Contact Number'}
+                    </button>
+                  )}
+                  {revealError && (
+                    <p className="modal__reveal-error">{revealError}</p>
+                  )}
+                  {revealedNumber && (
                     <>
+                      <p className="modal__revealed-number">📞 {revealedNumber}</p>
                       <a
                         className="modal__btn modal__btn--call"
-                        href={`tel:+${car.contactNumber}`}
+                        href={`tel:+${revealedNumber}`}
                       >
-                        📞 Call Seller
+                        Call Seller
                       </a>
                       <a
                         className="modal__btn modal__btn--whatsapp"
-                        href={`https://wa.me/${car.contactNumber}?text=${encodeURIComponent(`Hi, I'm interested in the ${car.year} ${car.make} ${car.model}`)}`}
+                        href={`https://wa.me/${revealedNumber}?text=${encodeURIComponent(`Hi, I'm interested in the ${car.year} ${car.make} ${car.model}`)}`}
                         target="_blank"
                         rel="noopener noreferrer"
                       >

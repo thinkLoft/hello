@@ -20,7 +20,14 @@ async function getBrowser() {
       '--disable-dev-shm-usage',
       '--disable-gpu',
       '--single-process',
+      '--no-zygote',
       '--disable-extensions',
+      '--disable-default-apps',
+      '--disable-breakpad',
+      '--disable-crash-reporter',
+      '--no-first-run',
+      '--mute-audio',
+      '--js-flags=--max-old-space-size=128',
     ],
   };
   const chromePath = process.env.PUPPETEER_EXECUTABLE_PATH || process.env.GOOGLE_CHROME_BIN;

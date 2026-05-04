@@ -80,9 +80,9 @@ async function scrapeDetail(srcURL) {
 
     const attr = { make: titleParts[0], model: titleParts[1] };
     $('.chars-column > li').each((i, el) => {
-      const subtitle = $(el).children('span').text();
-      const val = $(el).children('a').text();
-      if (ATTR_MAP[subtitle]) attr[ATTR_MAP[subtitle]] = val;
+      const subtitle = $(el).children('span').first().text().trim();
+      const val = ($(el).children('a').text().trim()) || ($(el).children('span').eq(1).text().trim());
+      if (ATTR_MAP[subtitle] && val) attr[ATTR_MAP[subtitle]] = val;
     });
 
     const imgs = [];

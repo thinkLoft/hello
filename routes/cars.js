@@ -9,6 +9,27 @@ const { getPriceBand, scoreListing, getWeights } = require('../services/scoringS
 
 const currentYear = new Date().getFullYear();
 
+// Strip contactNumber from public listing responses; replace with hasContact boolean
+function maskContacts(docs) {
+  return docs.map(({ contactNumber, ...rest }) => ({
+    ...rest,
+    hasContact: !!contactNumber,
+  }));
+}
+
+// In-memory rate limiter: max 10 contact reveals per IP per 15 min
+const revealLog = new Map();
+function checkRevealLimit(ip) {
+  const now = Date.now();
+  const windowMs = 15 * 60 * 1000;
+  const limit = 10;
+  const hits = (revealLog.get(ip) || []).filter((t) => now - t < windowMs);
+  if (hits.length >= limit) return false;
+  hits.push(now);
+  revealLog.set(ip, hits);
+  return true;
+}
+
 const CSV_FIELDS = [
   'url', 'posted', 'user', 'year', 'make', 'model', 'price',
   'date', 'parish', 'bodyType', 'transmission', 'driverSide',
@@ -23,8 +44,8 @@ router.get('/carsforsale', async (req, res) => {
       price: { $gte: 1000000 },
       year: { $gte: currentYear - 10 },
       imgs: { $gt: [] },
-    }).sort({ _id: -1 }).limit(500);
-    res.json(docs);
+    }).sort({ _id: -1 }).limit(500).lean();
+    res.json(maskContacts(docs));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -38,8 +59,8 @@ router.get('/undermil', async (req, res) => {
       price: { $lt: 1000000 },
       year: { $gte: currentYear - 10 },
       imgs: { $gt: [] },
-    }).sort({ _id: -1 }).limit(200);
-    res.json(docs);
+    }).sort({ _id: -1 }).limit(200).lean();
+    res.json(maskContacts(docs));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -52,8 +73,8 @@ router.get('/latest', async (req, res) => {
       hidden: { $ne: true },
       year: { $lt: currentYear - 10 },
       imgs: { $gt: [] },
-    }).sort({ _id: -1 }).limit(500);
-    res.json(docs);
+    }).sort({ _id: -1 }).limit(500).lean();
+    res.json(maskContacts(docs));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -65,8 +86,24 @@ router.get('/all', async (req, res) => {
       posted: true,
       hidden: { $ne: true },
       imgs: { $gt: [] },
-    }).sort({ _id: -1 }).limit(2000);
-    res.json(docs);
+    }).sort({ _id: -1 }).limit(2000).lean();
+    res.json(maskContacts(docs));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/cars/:id/reveal-contact', async (req, res) => {
+  const ip = req.ip || req.headers['x-forwarded-for']?.split(',')[0]?.trim() || 'unknown';
+  if (!checkRevealLimit(ip)) {
+    return res.status(429).json({ error: 'Too many requests — please wait before revealing more numbers' });
+  }
+  try {
+    const car = await db.Cars.findById(req.params.id, { contactNumber: 1 }).lean();
+    if (!car) return res.status(404).json({ error: 'Not found' });
+    if (!car.contactNumber) return res.status(404).json({ error: 'No contact info for this listing' });
+    await db.Cars.findByIdAndUpdate(req.params.id, { $inc: { contactReveals: 1 } });
+    res.json({ contactNumber: car.contactNumber });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

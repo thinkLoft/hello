@@ -184,6 +184,13 @@
   color: var(--color-text);
 }
 
+.modal__price-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
 .modal__price {
   font-size: 1.5rem;
   font-weight: 800;
@@ -378,6 +385,31 @@
   cursor: pointer;
   border: none;
   text-decoration: none;
+}
+
+.modal__btn--reveal {
+  background: #1d4ed8;
+  color: #fff;
+}
+
+.modal__btn--reveal:hover {
+  background: #1e40af;
+}
+
+.modal__revealed-number {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--color-text);
+  padding: 0.5rem 0.75rem;
+  background: var(--color-bg);
+  border-radius: var(--radius);
+  letter-spacing: 0.05em;
+}
+
+.modal__reveal-error {
+  font-size: 0.8rem;
+  color: #dc2626;
+  margin: 0;
 }
 
 .modal__btn--call {

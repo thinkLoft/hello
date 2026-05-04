@@ -88,7 +88,7 @@ async function scrape(link) {
       bodyType: specs['Body Type'] ?? null,
       driverSide: specs['Driver Side'] ?? null,
       transmission: specs['Transmission'] ?? null,
-      mileage: specs['Mileage'] ?? null,
+      mileage: specs['Mileage'] ?? specs['Mileage (km)'] ?? specs['Odometer'] ?? null,
       contactNumber,
       imgs,
     });

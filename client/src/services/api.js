@@ -25,6 +25,9 @@ const jsonPatch = (path, body) =>
     body: JSON.stringify(body),
   });
 
+export const revealContact = (id) =>
+  apiFetch(`/cars/${id}/reveal-contact`, { method: 'POST' });
+
 export const markAsSold = (id) => jsonPatch(`/cars/${id}`, { sold: true });
 export const updateListing = (id, fields) => jsonPatch(`/cars/${id}`, fields);
 export const hideListing = (id, hidden) => jsonPatch(`/cars/${id}`, { hidden });
