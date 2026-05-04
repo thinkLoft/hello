@@ -56,7 +56,7 @@ router.get('/undermil', async (req, res) => {
     const docs = await db.Cars.find({
       posted: true,
       hidden: { $ne: true },
-      price: { $lt: 1000000 },
+      price: { $gt: 0, $lt: 1000000 },
       year: { $gte: currentYear - 10 },
       imgs: { $gt: [] },
     }).sort({ _id: -1 }).limit(200).lean();
@@ -71,6 +71,7 @@ router.get('/latest', async (req, res) => {
     const docs = await db.Cars.find({
       posted: true,
       hidden: { $ne: true },
+      price: { $gt: 0 },
       year: { $lt: currentYear - 10 },
       imgs: { $gt: [] },
     }).sort({ _id: -1 }).limit(500).lean();
@@ -85,6 +86,7 @@ router.get('/all', async (req, res) => {
     const docs = await db.Cars.find({
       posted: true,
       hidden: { $ne: true },
+      price: { $gt: 0 },
       imgs: { $gt: [] },
     }).sort({ _id: -1 }).limit(2000).lean();
     res.json(maskContacts(docs));

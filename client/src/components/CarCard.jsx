@@ -38,9 +38,9 @@ export default function CarCard({ car, onClick, sold }) {
           <span className="car-card__img-count">+{car.imgs.length - 1} photos</span>
         )}
         <span className="car-card__source">{scraperName(car.user)}</span>
-        {car.score != null && (
+        {car.score != null && isAdmin && (
           <span className="car-card__deal-badge">
-            <DealRatingBadge score={car.score} size="sm" showScore={isAdmin} />
+            <DealRatingBadge score={car.score} size="sm" showScore />
           </span>
         )}
         {sold && (

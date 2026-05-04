@@ -5,15 +5,16 @@ import './Navbar.css';
 
 const TABS = [
   { id: 'all', label: 'All Listings', sub: 'Jamaica' },
-  { id: 'forsale', label: 'For Sale', sub: '1M+' },
+  { id: 'forsale', label: 'For You', sub: 'Best Deals' },
   { id: 'undermil', label: 'Under 1M', sub: 'Budget' },
   { id: 'classics', label: 'Classics', sub: '10+ yrs' },
-  { id: 'calculator', label: 'Price Check', sub: 'Calculator' },
+  { id: 'calculator', label: 'Price Check', sub: 'Calculator', adminOnly: true },
 ];
 
 export default function Navbar({ activeTab, onTabChange, count }) {
   const [compact, setCompact] = useState(false);
   const { user, logout } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -41,7 +42,7 @@ export default function Navbar({ activeTab, onTabChange, count }) {
           )}
         </div>
         <nav className="navbar__tabs">
-          {TABS.map((tab) => (
+          {TABS.filter((tab) => !tab.adminOnly || isAdmin).map((tab) => (
             <button
               key={tab.id}
               className={`navbar__tab${activeTab === tab.id ? ' navbar__tab--active' : ''}`}

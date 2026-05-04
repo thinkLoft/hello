@@ -76,14 +76,16 @@ async function nullCheck(x) {
     codes.push('noImages');
   }
 
-  // Price check
+  // Price check — strict gate: no price or out of range means don't post
   if (!res.price) {
     res.comments += 'No price. ';
     res.price = 0;
+    res.posted = false;
     codes.push('noPrice');
   } else if (parseInt(res.price) < 100000 || res.price > 30000000) {
     res.comments += `Price out of range: $${res.price}. `;
     res.price = 0;
+    res.posted = false;
     codes.push('priceOutOfRange');
   }
 

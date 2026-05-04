@@ -234,7 +234,7 @@ export default function CarModal({ car, onClose, onSold, onUpdate, onHide }) {
             <h2 className="modal__title">{car.year} {car.make} {car.model}</h2>
             <div className="modal__price-row">
               <p className="modal__price">{formatPrice(car.price)}</p>
-              {car.score != null && <DealRatingBadge score={car.score} size="md" />}
+              {car.score != null && isAdmin && <DealRatingBadge score={car.score} size="md" showScore />}
             </div>
           </div>
 

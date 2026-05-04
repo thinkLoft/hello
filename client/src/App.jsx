@@ -23,6 +23,8 @@ const EMPTY_FILTERS = { make: '', bodyType: '', transmission: '', parish: '', se
 const PAGE_SIZE = 24;
 
 function HomePage() {
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const [activeTab, setActiveTab] = useState('all');
   const [allCars, setAllCars] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -48,7 +50,7 @@ function HomePage() {
     setLoading(true);
     setError(null);
     setAllCars([]);
-    setFilters(EMPTY_FILTERS);
+    setFilters(activeTab === 'forsale' ? { ...EMPTY_FILTERS, sort: 'score-high' } : EMPTY_FILTERS);
     setVisibleCount(PAGE_SIZE);
 
     fetcher()
@@ -114,6 +116,7 @@ function HomePage() {
   const hasMore = visibleCount < filteredCars.length;
 
   const handleTabChange = (tab) => {
+    if (tab === 'calculator' && !isAdmin) return;
     setActiveTab(tab);
     setSelectedCar(null);
   };
@@ -165,9 +168,9 @@ function HomePage() {
       )}
 
       <main className="app__main">
-        {activeTab === 'calculator' ? (
+        {activeTab === 'calculator' && isAdmin ? (
           <PriceCalculator />
-        ) : (
+        ) : activeTab !== 'calculator' ? (
           <CarGrid
             cars={visibleCars}
             loading={loading}
@@ -182,7 +185,7 @@ function HomePage() {
                 : 'No listings match your filters.'
             }
           />
-        )}
+        ) : null}
       </main>
 
       {selectedCar && (
