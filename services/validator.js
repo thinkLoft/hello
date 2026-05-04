@@ -115,10 +115,10 @@ async function nullCheck(x) {
     codes.push('noModel');
   }
 
-  // Year check — strict gate
+  // Year check — soft gate for missing, strict for bad/out-of-range
   if (!res.year) {
     res.comments += 'No year. ';
-    res.posted = false;
+    res.year = null;
     codes.push('noYear');
   } else if (isNaN(res.year)) {
     res.comments += 'Year is not a number. ';
