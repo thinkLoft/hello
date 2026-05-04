@@ -9,12 +9,12 @@ function getRating(score) {
   return { label: 'Overpriced', tier: 'over' };
 }
 
-export default function DealRatingBadge({ score, size = 'sm' }) {
+export default function DealRatingBadge({ score, size = 'sm', showScore = false }) {
   const rating = getRating(score);
   if (!rating) return null;
   return (
     <span className={`deal-badge deal-badge--${rating.tier} deal-badge--${size}`}>
-      {rating.label}
+      {rating.label}{showScore ? ` · ${score}` : ''}
     </span>
   );
 }

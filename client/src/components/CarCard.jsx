@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import './CarCard.css';
+import { useAuth } from '../context/AuthContext';
 import { scraperName } from '../utils/scraperNames';
 import DealRatingBadge from './DealRatingBadge';
 
@@ -12,6 +13,8 @@ const formatPrice = (price) =>
 
 export default function CarCard({ car, onClick, sold }) {
   const [imgError, setImgError] = useState(false);
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const hasImage = !imgError && car.imgs?.[0];
 
   return (
@@ -37,7 +40,7 @@ export default function CarCard({ car, onClick, sold }) {
         <span className="car-card__source">{scraperName(car.user)}</span>
         {car.score != null && (
           <span className="car-card__deal-badge">
-            <DealRatingBadge score={car.score} size="sm" />
+            <DealRatingBadge score={car.score} size="sm" showScore={isAdmin} />
           </span>
         )}
         {sold && (
