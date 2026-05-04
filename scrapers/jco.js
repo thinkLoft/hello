@@ -1,6 +1,7 @@
 const cheerio = require('cheerio');
 const db = require('../models');
 const { nullCheck } = require('../services/validator');
+const { cacheImages } = require('../services/imageCache');
 const { fetchPage } = require('./browser');
 
 const ATTR_MAP = {
@@ -113,8 +114,9 @@ async function scrapeDetail(srcURL) {
       }
     });
 
-    const imgs = [];
-    $('a.item-images').each((i, el) => imgs.push($(el).attr('href')));
+    const rawImgs = [];
+    $('a.item-images').each((i, el) => rawImgs.push($(el).attr('href')));
+    const imgs = await cacheImages(rawImgs);
 
     return await nullCheck({ user: 'jamaicaonlineclassifieds', url: srcURL, imgs, ...attr });
   } catch (err) {

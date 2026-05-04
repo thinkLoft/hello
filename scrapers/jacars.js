@@ -2,6 +2,7 @@ const axios = require('axios');
 const cheerio = require('cheerio');
 const db = require('../models');
 const { nullCheck } = require('../services/validator');
+const { cacheImages } = require('../services/imageCache');
 const { fetchPage } = require('./browser');
 
 const ATTR_MAP = {
@@ -92,11 +93,12 @@ async function scrapeDetail(srcURL) {
       if (ATTR_MAP[subtitle] && val) attr[ATTR_MAP[subtitle]] = val;
     });
 
-    const imgs = [];
+    const rawImgs = [];
     $('img.announcement__images-item').each((i, el) => {
       const src = $(el).attr('src')?.trim();
-      if (src && !imgs.includes(src)) imgs.push(src);
+      if (src && !rawImgs.includes(src)) rawImgs.push(src);
     });
+    const imgs = await cacheImages(rawImgs);
 
     return await nullCheck({
       user: 'jacars',

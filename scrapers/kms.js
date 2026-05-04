@@ -2,6 +2,7 @@ const axios = require('axios');
 const cheerio = require('cheerio');
 const db = require('../models');
 const { nullCheck } = require('../services/validator');
+const { cacheImages } = require('../services/imageCache');
 
 async function scrape(pageUrl) {
   const stats = {
@@ -56,11 +57,12 @@ async function scrapeDetail(srcURL) {
     const $ = cheerio.load(response.data);
     const titleParts = $('h2[itemprop="name"]').text().trim().replace(/\s*\([^)]+\)\s*$/, '').split(' ');
 
-    const imgs = [];
+    const rawImgs = [];
     $('ul.slides > li > img').each((i, el) => {
       const src = ($(el).attr('data-full-image') || $(el).attr('src'))?.trim();
-      if (src) imgs.push(src);
+      if (src) rawImgs.push(src);
     });
+    const imgs = await cacheImages(rawImgs);
 
     return await nullCheck({
       user: 'kms',

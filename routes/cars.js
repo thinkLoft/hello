@@ -6,6 +6,7 @@ const db = require('../models');
 const { priceCheck } = require('../services/priceAnalysis');
 const { requireAdmin } = require('./auth');
 const { getPriceBand, scoreListing, getWeights } = require('../services/scoringService');
+const { cacheImages } = require('../services/imageCache');
 
 const currentYear = new Date().getFullYear();
 
@@ -216,6 +217,39 @@ router.post('/cars/:id/rescore', requireAdmin, async (req, res) => {
 
     await db.Cars.findByIdAndUpdate(req.params.id, { $set: scoreFields });
     res.json({ ok: true, ...scoreFields });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Backfill existing listings: upload any non-Cloudinary imgs[] entries to Cloudinary.
+// Processes in batches of 10 listings to respect API rate limits.
+// Safe to call multiple times — cacheImages() skips already-Cloudinary URLs.
+router.post('/admin/backfill-images', requireAdmin, async (req, res) => {
+  try {
+    const cars = await db.Cars.find({
+      imgs: { $elemMatch: { $not: /cloudinary\.com/ } },
+    }).select('_id imgs').lean();
+
+    res.json({ started: true, total: cars.length });
+
+    // Run in background after response so the HTTP call doesn't time out
+    (async () => {
+      let updated = 0;
+      const BATCH = 10;
+      for (let i = 0; i < cars.length; i += BATCH) {
+        const batch = cars.slice(i, i + BATCH);
+        await Promise.all(batch.map(async (car) => {
+          const newImgs = await cacheImages(car.imgs);
+          const changed = newImgs.some((u, idx) => u !== car.imgs[idx]);
+          if (changed) {
+            await db.Cars.findByIdAndUpdate(car._id, { $set: { imgs: newImgs } });
+            updated++;
+          }
+        }));
+      }
+      console.log(`[backfill-images] done — ${updated}/${cars.length} listings updated`);
+    })();
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

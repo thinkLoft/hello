@@ -2,6 +2,7 @@ const axios = require('axios');
 const cheerio = require('cheerio');
 const db = require('../models');
 const { nullCheck } = require('../services/validator');
+const { cacheImages } = require('../services/imageCache');
 
 const HEADERS = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' };
 
@@ -71,8 +72,9 @@ async function scrape(link) {
     });
 
     // Images
-    const imgs = [];
-    $('.gallery__thumbs > a').each((_, el) => imgs.push($(el).attr('href')));
+    const rawImgs = [];
+    $('.gallery__thumbs > a').each((_, el) => rawImgs.push($(el).attr('href')));
+    const imgs = await cacheImages(rawImgs);
 
     // Contact: href="tel:18761234567"
     const contactNumber = $('.contact_details a[href^="tel:"]').attr('href')?.replace(/[^0-9]/g, '') ?? null;
