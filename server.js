@@ -24,7 +24,14 @@ setInterval(() => {
 }, 5 * 60 * 1000);
 
 app.set('trust proxy', 1);
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+      'img-src': ["'self'", 'data:', 'https:'],
+    },
+  },
+}));
 app.use(morgan('dev'));
 app.use(cors({ credentials: true, origin: process.env.NODE_ENV === 'production' ? false : true }));
 app.use(express.urlencoded({ extended: true }));
