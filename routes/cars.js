@@ -213,6 +213,7 @@ router.post('/cars/:id/rescore', requireAdmin, async (req, res) => {
       scoreSummary: result.scoreSummary,
       anomalyFlags: result.anomalyFlags,
       priceband: result.priceband,
+      comparableCount: mmStats.count,
     };
 
     await db.Cars.findByIdAndUpdate(req.params.id, { $set: scoreFields });
