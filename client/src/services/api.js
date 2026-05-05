@@ -30,7 +30,8 @@ export const revealContact = (id) =>
 
 export const markAsSold = (id) => jsonPatch(`/cars/${id}`, { sold: true });
 export const updateListing = (id, fields) => jsonPatch(`/cars/${id}`, fields);
-export const hideListing = (id, hidden) => jsonPatch(`/cars/${id}`, { hidden });
+export const hideListing = (id, hidden, reason) =>
+  jsonPatch(`/cars/${id}`, { hidden, ...(reason ? { hideReason: reason } : {}) });
 export const rescoreListing = (id) =>
   apiFetch(`/cars/${id}/rescore`, { method: 'POST' });
 

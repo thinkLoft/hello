@@ -19,7 +19,7 @@ const FETCHERS = {
   classics: fetchLatest,
 };
 
-const EMPTY_FILTERS = { make: '', bodyType: '', transmission: '', parish: '', search: '', sort: '', minPrice: '', maxPrice: '' };
+const EMPTY_FILTERS = { make: '', bodyType: '', transmission: '', parish: '', search: '', sort: '', minPrice: '', maxPrice: '', sources: [] };
 const PAGE_SIZE = 24;
 
 function HomePage() {
@@ -68,11 +68,13 @@ function HomePage() {
       if (filters.bodyType && car.bodyType !== filters.bodyType) return false;
       if (filters.transmission && car.transmission !== filters.transmission) return false;
       if (filters.parish && car.parish !== filters.parish) return false;
-      if (minP !== null && (car.price ?? 0) < minP) return false;
-      if (maxP !== null && (car.price ?? 0) > maxP) return false;
+      if (filters.sources?.length > 0 && !filters.sources.includes(car.user)) return false;
+      const hasPrice = car.price && car.price > 0;
+      if (minP !== null && hasPrice && car.price < minP) return false;
+      if (maxP !== null && hasPrice && car.price > maxP) return false;
       if (filters.search) {
         const q = filters.search.toLowerCase();
-        const hay = `${car.year ?? ''} ${car.make ?? ''} ${car.model ?? ''}`.toLowerCase();
+        const hay = `${car.year ?? ''} ${car.make ?? ''} ${car.model ?? ''} ${car.user ?? ''}`.toLowerCase();
         if (!hay.includes(q)) return false;
       }
       return true;
@@ -136,8 +138,8 @@ function HomePage() {
     setSelectedCar((prev) => prev?._id === updated._id ? { ...prev, ...updated } : prev);
   };
 
-  const handleHide = async (car) => {
-    await hideListing(car._id, true);
+  const handleHide = async (car, reason) => {
+    await hideListing(car._id, true, reason);
     setHiddenIds((prev) => new Set([...prev, car._id]));
     setSelectedCar(null);
   };

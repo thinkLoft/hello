@@ -1,6 +1,14 @@
 import React, { useState } from 'react';
 import './Filters.css';
 import { useAuth } from '../context/AuthContext';
+import { scraperName } from '../utils/scraperNames';
+
+const SOURCES = [
+  { key: 'autoadsja', label: 'AutoAds JA' },
+  { key: 'jacars', label: 'JaCars' },
+  { key: 'jamaicaonlineclassifieds', label: 'Jamaica Classifieds' },
+  { key: 'kms', label: 'KMS' },
+];
 
 const BASE_SORT_OPTIONS = [
   { value: '', label: 'Sort' },
@@ -18,7 +26,7 @@ const ADMIN_SORT_OPTIONS = [
   { value: 'score-low', label: 'Quality Score: Worst First' },
 ];
 
-const EMPTY_FILTERS = { make: '', bodyType: '', transmission: '', parish: '', search: '', sort: '', minPrice: '', maxPrice: '' };
+const EMPTY_FILTERS = { make: '', bodyType: '', transmission: '', parish: '', search: '', sort: '', minPrice: '', maxPrice: '', sources: [] };
 
 export default function Filters({ cars, filters, onFilterChange, resultCount }) {
   const { user } = useAuth();
@@ -37,8 +45,19 @@ export default function Filters({ cars, filters, onFilterChange, resultCount }) 
     onFilterChange(EMPTY_FILTERS);
     setShowAdvanced(false);
   };
-  const hasFilters = Object.entries(filters).some(([k, v]) => k !== 'sort' && v && v !== '');
-  const hasAdvancedFilter = filters.bodyType || filters.transmission || filters.parish;
+  const toggleSource = (key) => {
+    const next = filters.sources?.includes(key)
+      ? filters.sources.filter((s) => s !== key)
+      : [...(filters.sources ?? []), key];
+    onFilterChange({ ...filters, sources: next });
+  };
+
+  const hasFilters = Object.entries(filters).some(([k, v]) => {
+    if (k === 'sort') return false;
+    if (k === 'sources') return v?.length > 0;
+    return v && v !== '';
+  });
+  const hasAdvancedFilter = filters.bodyType || filters.transmission || filters.parish || filters.sources?.length > 0;
 
   return (
     <div className="filters">
@@ -48,7 +67,7 @@ export default function Filters({ cars, filters, onFilterChange, resultCount }) 
           <input
             className="filters__search"
             type="search"
-            placeholder="Search make, model, year…"
+            placeholder="Search make, model, year, source…"
             value={filters.search}
             onChange={handleChange('search')}
           />
@@ -116,6 +135,22 @@ export default function Filters({ cars, filters, onFilterChange, resultCount }) 
               <option value="">All Parishes</option>
               {parishes.map((p) => <option key={p} value={p}>{p}</option>)}
             </select>
+
+            <div className="filters__sources">
+              <span className="filters__sources-label">Sources</span>
+              <div className="filters__sources-list">
+                {SOURCES.map(({ key, label }) => (
+                  <label key={key} className="filters__source-option">
+                    <input
+                      type="checkbox"
+                      checked={filters.sources?.includes(key) ?? false}
+                      onChange={() => toggleSource(key)}
+                    />
+                    {label}
+                  </label>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       )}

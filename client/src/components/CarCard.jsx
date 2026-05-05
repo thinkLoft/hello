@@ -5,11 +5,9 @@ import { scraperName } from '../utils/scraperNames';
 import DealRatingBadge from './DealRatingBadge';
 
 const formatPrice = (price) =>
-  new Intl.NumberFormat('en-JM', {
-    style: 'currency',
-    currency: 'JMD',
-    maximumFractionDigits: 0,
-  }).format(price);
+  (!price || price === 0)
+    ? 'Call for Pricing'
+    : new Intl.NumberFormat('en-JM', { style: 'currency', currency: 'JMD', maximumFractionDigits: 0 }).format(price);
 
 export default function CarCard({ car, onClick, sold }) {
   const [imgError, setImgError] = useState(false);
