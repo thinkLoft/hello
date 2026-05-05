@@ -9,42 +9,39 @@ async function debugJCO() {
   try {
     const html = await fetchPage(url, { waitSelector: 'li.collection-item', timeout: 30000 });
     const $ = cheerio.load(html);
-    console.log('li.collection-item items:');
-    $('li.collection-item').each((i, el) => console.log(' ', i, $(el).text().trim().slice(0, 120)));
-    console.log('div.col.s12.l3.m6.flow-text items:');
-    $('div.col.s12.l3.m6.flow-text').each((i, el) => console.log(' ', i, $(el).text().trim().slice(0, 120)));
-    console.log('Any element with $ (first 10):');
-    let n = 0;
+
+    // Dump all text nodes that look like price or parish
+    console.log('\n-- All text with digits > 4 chars or parish keywords --');
+    const seen = new Set();
     $('*').each((i, el) => {
-      if (n >= 10) return false;
       const t = $(el).clone().children().remove().end().text().trim();
-      if (t.includes('$') && t.length < 40) { console.log(' ', el.tagName, $(el).attr('class'), JSON.stringify(t)); n++; }
+      if (t.length > 3 && t.length < 80 && !seen.has(t)) {
+        if (/\d{4,}/.test(t) || /kingston|parish|st\.|clarendon|portland|westmoreland|hanover|manchester|trelawny|price|contact/i.test(t)) {
+          seen.add(t);
+          console.log(' ', el.tagName, $(el).attr('class')?.slice(0,40), JSON.stringify(t.slice(0,80)));
+        }
+      }
     });
+
+    // Also dump page title and first 3000 chars of body text
+    console.log('\n-- Page title:', $('title').text());
+    console.log('-- Body text sample (first 2000 chars):');
+    console.log($('body').text().replace(/\s+/g, ' ').trim().slice(0, 2000));
   } catch (e) { console.error('JCO failed:', e.message); }
 }
 
 async function debugJaCars() {
-  const url = 'https://www.jacars.net/adv/2510377_ready/';
+  // Try a different, fresher JaCars URL
+  const url = 'https://www.jacars.net/adv/2457820_toyota-axio/';
   console.log('\n=== JaCars ===', url);
   try {
-    const html = await fetchPage(url, { waitSelector: '#ad-title', timeout: 30000 });
+    const html = await fetchPage(url, { timeout: 30000 });
     const $ = cheerio.load(html);
+    console.log('Page title:', $('title').text().trim());
     console.log('meta[itemprop=price]:', $("meta[itemprop='price']").attr('content'));
-    console.log('#ad-title:', $('#ad-title').text().trim().slice(0, 80));
-    console.log('.chars-column li items:');
-    $('.chars-column > li').each((i, el) => {
-      const subtitle = $(el).children('span').first().text().trim();
-      const val = $(el).children('a').text().trim() || $(el).children('span').eq(1).text().trim();
-      console.log(' ', subtitle, '->', val);
-    });
-    console.log('Any element with $ or JMD (first 10):');
-    let n = 0;
-    $('*').each((i, el) => {
-      if (n >= 10) return false;
-      const t = $(el).clone().children().remove().end().text().trim();
-      if ((t.includes('$') || t.toLowerCase().includes('jmd')) && t.length < 50)
-        { console.log(' ', el.tagName, $(el).attr('class'), JSON.stringify(t)); n++; }
-    });
+    // Dump first 3000 chars of body
+    console.log('Body text sample:');
+    console.log($('body').text().replace(/\s+/g, ' ').trim().slice(0, 2000));
   } catch (e) { console.error('JaCars failed:', e.message); }
 }
 
