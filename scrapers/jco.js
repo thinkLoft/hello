@@ -94,17 +94,37 @@ async function scrapeDetail(srcURL) {
 
     if (!attr.year) return { failed: true, reason: 'no_year_in_parsed_html' };
 
+    // Price + parish from JSON-LD (new JCO layout)
+    $('script[type="application/ld+json"]').each((i, el) => {
+      try {
+        const data = JSON.parse($(el).text());
+        if (data['@type'] === 'Product' && data.offers?.price) {
+          if (!attr.price) attr.price = data.offers.price;
+          // Location appears after last " - " in the product name: "For Sale: X - Location"
+          if (!attr.parish) {
+            const parts = (data.name || '').split(' - ');
+            if (parts.length > 1) attr.parish = parts[parts.length - 1].trim();
+          }
+        }
+      } catch (_) {}
+    });
+
+    // Contact from CALL button (new layout)
+    if (!attr.contactNumber) {
+      $('a[href^="tel:"]').each((i, el) => {
+        if (!attr.contactNumber) attr.contactNumber = $(el).attr('href').replace('tel:', '').trim();
+      });
+    }
+
+    // Legacy layout fallback (old div.col.s12.l3.m6.flow-text)
     $('div.col.s12.l3.m6.flow-text').each((i, el) => {
       const link = $(el).children('a').attr('href');
-      if (link?.startsWith('tel:')) attr.contactNumber = link.replace('tel:', '').trim();
-
+      if (link?.startsWith('tel:') && !attr.contactNumber) attr.contactNumber = link.replace('tel:', '').trim();
       const text = $(el).last().contents().text().trim();
-      if (text.replace(/(\W)*\$/g, '$').startsWith('$')) {
+      if (!attr.price && text.replace(/(\W)*\$/g, '$').startsWith('$'))
         attr.price = text.replace(/[^0-9.-]+/g, '');
-      }
-      if (text.replace(/(\W)*/g, '').trim().startsWith('map')) {
+      if (!attr.parish && text.replace(/(\W)*/g, '').trim().startsWith('map'))
         attr.parish = text.replace(/(\W)*map/g, '').trim();
-      }
     });
 
     attr.description = $('div.wysiwyg').text().trim();

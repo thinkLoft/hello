@@ -9,11 +9,11 @@ const HEADERS = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Apple
 const BATCH_SIZE = 20;
 const STALE_HOURS = 24;
 
+// Only include scrapers that use axios (not Puppeteer) — Puppeteer-based detail
+// re-scrapes cause OOM on the 512MB dyno when run inside an HTTP request handler.
 const DETAIL_SCRAPERS = {
   autoadsja: autoadsDetail,
   kms: kmsDetail,
-  jacars: jacarsDetail,
-  jamaicaonlineclassifieds: jcoDetail,
 };
 
 async function refreshListings() {
