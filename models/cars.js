@@ -30,6 +30,7 @@ const carSchema = new Schema(
     comparableCount: { type: Number, default: null },
     adminNotes:     { type: String, default: null },
     hidden:         { type: Boolean, default: false },
+    hideReason:     { type: String, default: null },
     lastSeenAt:     { type: Date, default: null },
     contactReveals: { type: Number, default: 0 },
   },

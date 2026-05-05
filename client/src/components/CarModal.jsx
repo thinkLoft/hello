@@ -6,11 +6,18 @@ import { scraperName } from '../utils/scraperNames';
 import DealRatingBadge from './DealRatingBadge';
 
 const formatPrice = (price) =>
-  new Intl.NumberFormat('en-JM', {
-    style: 'currency',
-    currency: 'JMD',
-    maximumFractionDigits: 0,
-  }).format(price);
+  (!price || price === 0)
+    ? 'Call for Pricing'
+    : new Intl.NumberFormat('en-JM', { style: 'currency', currency: 'JMD', maximumFractionDigits: 0 }).format(price);
+
+const HIDE_REASONS = [
+  'Duplicate listing',
+  'Wrong category',
+  'Spam / fake listing',
+  'Price clearly wrong',
+  'Listing removed from source',
+  'Other',
+];
 
 const formatDate = (val) => {
   if (!val) return val;
@@ -78,6 +85,8 @@ export default function CarModal({ car, onClose, onSold, onUpdate, onHide }) {
   const [rescoring, setRescoring] = useState(false);
 
   const [hideLoading, setHideLoading] = useState(false);
+  const [showHidePrompt, setShowHidePrompt] = useState(false);
+  const [hideReason, setHideReason] = useState('');
 
   const [revealedNumber, setRevealedNumber] = useState(null);
   const [revealLoading, setRevealLoading] = useState(false);
@@ -158,10 +167,16 @@ export default function CarModal({ car, onClose, onSold, onUpdate, onHide }) {
     }
   };
 
-  const handleHideClick = async () => {
+  const handleHideClick = () => {
+    setShowHidePrompt(true);
+    setHideReason('');
+  };
+
+  const confirmHide = async () => {
     setHideLoading(true);
+    setShowHidePrompt(false);
     try {
-      await onHide?.(car);
+      await onHide?.(car, hideReason || null);
     } catch {
       setHideLoading(false);
     }
@@ -184,6 +199,34 @@ export default function CarModal({ car, onClose, onSold, onUpdate, onHide }) {
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
+
+        {showHidePrompt && (
+          <div className="modal__hide-prompt" onClick={(e) => e.stopPropagation()}>
+            <p className="modal__hide-prompt-title">Why are you hiding this listing?</p>
+            <div className="modal__hide-reasons">
+              {HIDE_REASONS.map((r) => (
+                <label key={r} className="modal__hide-reason-option">
+                  <input
+                    type="radio"
+                    name="hideReason"
+                    value={r}
+                    checked={hideReason === r}
+                    onChange={() => setHideReason(r)}
+                  />
+                  {r}
+                </label>
+              ))}
+            </div>
+            <div className="modal__hide-prompt-actions">
+              <button className="modal__btn modal__btn--hide" onClick={confirmHide} disabled={!hideReason}>
+                Confirm Hide
+              </button>
+              <button className="modal__btn" onClick={() => setShowHidePrompt(false)}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
         {/* Fixed close button (stays in viewport while scrolling) */}
         <button className="modal__close" onClick={onClose} aria-label="Close">✕</button>
         {/* Inner close button (top-right of modal box) */}

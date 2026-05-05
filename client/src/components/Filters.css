@@ -148,6 +148,52 @@
   flex-wrap: wrap;
 }
 
+.filters__sources {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.filters__sources-label {
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+
+.filters__sources-list {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.filters__source-option {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.825rem;
+  color: var(--color-text);
+  cursor: pointer;
+  padding: 0.3rem 0.6rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  transition: border-color 0.15s, background 0.15s;
+  user-select: none;
+}
+
+.filters__source-option:has(input:checked) {
+  border-color: var(--color-primary);
+  background: rgb(0 95 31 / 0.06);
+  color: var(--color-primary);
+}
+
+.filters__source-option input[type="checkbox"] {
+  accent-color: var(--color-primary);
+  width: 13px;
+  height: 13px;
+}
+
 .filters__count {
   margin-left: auto;
   font-size: 0.8rem;
