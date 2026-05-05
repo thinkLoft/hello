@@ -96,6 +96,17 @@ router.get('/all', async (req, res) => {
   }
 });
 
+router.get('/cars/slug/:slug', async (req, res) => {
+  try {
+    const car = await db.Cars.findOne({ slug: req.params.slug }).lean();
+    if (!car) return res.status(404).json({ error: 'Listing not found' });
+    const [masked] = maskContacts([car]);
+    res.json(masked);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.post('/cars/:id/reveal-contact', async (req, res) => {
   const ip = req.ip || req.headers['x-forwarded-for']?.split(',')[0]?.trim() || 'unknown';
   if (!checkRevealLimit(ip)) {
@@ -172,6 +183,9 @@ router.patch('/cars/:id', requireAdmin, async (req, res) => {
     }
     if (typeof body.hidden === 'boolean') {
       update.hidden = body.hidden;
+    }
+    if (body.hideReason !== undefined) {
+      update.hideReason = body.hideReason;
     }
     for (const field of EDITABLE_FIELDS) {
       if (Object.prototype.hasOwnProperty.call(body, field)) {

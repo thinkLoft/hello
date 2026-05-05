@@ -48,6 +48,7 @@ export const fetchRejections = (source, hours = 24) =>
   apiFetch(`/scraper-rejections?source=${encodeURIComponent(source)}&hours=${hours}`);
 export const triggerScrape = (source) =>
   apiFetch(`/scrape/run?source=${encodeURIComponent(source)}`, { method: 'POST' });
+export const fetchCarBySlug = (slug) => apiFetch(`/cars/slug/${slug}`);
 export const fetchScoringWeights = () => apiFetch('/scoring-weights');
 export const updateScoringWeights = (weights) =>
   apiFetch('/scoring-weights', {

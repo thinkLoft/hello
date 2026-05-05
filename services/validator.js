@@ -44,6 +44,12 @@ const VALID_PARISHES = [
 // Run `node scripts/updateCarMakes.js` to refresh (quarterly).
 async function loadMakeDb() {}
 
+function makeSlug(car) {
+  const id6 = String(car._id ?? '').slice(-6);
+  const raw = `${car.year ?? ''}-${car.make ?? ''}-${car.model ?? ''}-${id6}`;
+  return raw.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '').replace(/-+/g, '-');
+}
+
 function makeCheck(make) {
   if (make.startsWith('Merc') || make.startsWith('Benz')) return 'Mercedes-Benz';
   if (make.startsWith('Land')) return 'Land Rover';
@@ -212,11 +218,14 @@ async function nullCheck(x) {
 
 async function saveToDb(result) {
   try {
-    await db.Cars.findOneAndUpdate(
+    const doc = await db.Cars.findOneAndUpdate(
       { url: result.url },
       { $set: { ...result, lastSeenAt: new Date() } },
       { upsert: true, new: true, setDefaultsOnInsert: true }
     );
+    if (doc && !doc.slug) {
+      await db.Cars.updateOne({ _id: doc._id }, { $set: { slug: makeSlug(doc) } });
+    }
     return true;
   } catch (err) {
     console.error('DB upsert error:', err.message);
@@ -224,4 +233,4 @@ async function saveToDb(result) {
   }
 }
 
-module.exports = { nullCheck, makeCheck, contactCheck, loadMakeDb };
+module.exports = { nullCheck, makeCheck, contactCheck, loadMakeDb, makeSlug };

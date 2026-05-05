@@ -29,6 +29,7 @@ const carSchema = new Schema(
     priceband:      { type: String, default: null },
     comparableCount: { type: Number, default: null },
     adminNotes:     { type: String, default: null },
+    slug:           { type: String, default: null },
     hidden:         { type: Boolean, default: false },
     hideReason:     { type: String, default: null },
     lastSeenAt:     { type: Date, default: null },
@@ -41,6 +42,7 @@ carSchema.index({ posted: 1, price: 1, year: 1 });
 carSchema.index({ make: 1, model: 1, year: 1 });
 carSchema.index({ score: -1, posted: 1 });
 carSchema.index({ lastSeenAt: 1 });
+carSchema.index({ slug: 1 }, { unique: true, sparse: true });
 
 const Cars = mongoose.model('Cars', carSchema);
 

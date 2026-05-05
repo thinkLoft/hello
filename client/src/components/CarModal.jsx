@@ -429,6 +429,16 @@ export default function CarModal({ car, onClose, onSold, onUpdate, onHide }) {
                       </a>
                     </>
                   )}
+                  {car.slug && (
+                    <a
+                      className="modal__btn modal__btn--share"
+                      href={`/cars/${car.slug}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Share / Open Page ↗
+                    </a>
+                  )}
                   <a
                     className="modal__btn modal__btn--link"
                     href={car.url}

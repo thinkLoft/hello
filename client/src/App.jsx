@@ -9,6 +9,7 @@ import PriceCalculator from './components/PriceCalculator';
 import ProtectedRoute from './components/ProtectedRoute';
 import LoginPage from './pages/LoginPage';
 import AdminPage from './pages/AdminPage';
+import CarDetailPage from './pages/CarDetailPage';
 import { fetchAll, fetchCarsForSale, fetchUnderMil, fetchLatest, fetchCount, markAsSold, updateListing, hideListing } from './services/api';
 import './App.css';
 
@@ -205,6 +206,7 @@ export default function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/admin" element={<ProtectedRoute requiredRole="admin"><AdminPage /></ProtectedRoute>} />
           <Route path="/" element={<HomePage />} />
+          <Route path="/cars/:slug" element={<CarDetailPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AuthProvider>

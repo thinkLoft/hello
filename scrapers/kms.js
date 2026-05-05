@@ -60,7 +60,8 @@ async function scrapeDetail(srcURL) {
     const rawImgs = [];
     $('ul.slides > li > img').each((i, el) => {
       const src = ($(el).attr('data-full-image') || $(el).attr('src'))?.trim();
-      if (src) rawImgs.push(src);
+      // Strip WordPress thumbnail size suffix (-762x456.jpg → .jpg) to get full-res
+      if (src) rawImgs.push(src.replace(/-\d+x\d+(\.[a-z]+)$/i, '$1'));
     });
     const imgs = await cacheImages(rawImgs);
 
