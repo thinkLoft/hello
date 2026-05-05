@@ -27,6 +27,7 @@ const carSchema = new Schema(
     scoreSummary:   { type: String, default: null },
     anomalyFlags:   { type: [String], default: [] },
     priceband:      { type: String, default: null },
+    comparableCount: { type: Number, default: null },
     adminNotes:     { type: String, default: null },
     hidden:         { type: Boolean, default: false },
     lastSeenAt:     { type: Date, default: null },

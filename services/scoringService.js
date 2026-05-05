@@ -181,6 +181,7 @@ async function runScoringBatch() {
                 scoreSummary: result.scoreSummary,
                 anomalyFlags: result.anomalyFlags,
                 priceband: result.priceband,
+                comparableCount: mmStats.count,
               },
             },
           },
