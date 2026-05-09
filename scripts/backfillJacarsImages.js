@@ -3,12 +3,33 @@
 //   MONGODB_URI=<prod-uri> node scripts/backfillJacarsImages.js
 //
 // Uses Puppeteer — must run locally, not on Heroku (memory limits).
-// ~30s per listing. Safe to re-run — skips listings where imgs haven't changed.
+// Safe to re-run — skips listings where imgs haven't changed.
 
 require('dotenv').config();
 const mongoose = require('mongoose');
+const cheerio = require('cheerio');
 const db = require('../models');
-const { scrapeDetail } = require('../scrapers/jacars');
+const { fetchPage } = require('../scrapers/browser');
+const { cacheImages } = require('../services/imageCache');
+
+async function extractImgs(url) {
+  const html = await fetchPage(url, { waitSelector: '#ad-title', timeout: 30000 });
+  const $ = cheerio.load(html);
+  const rawImgs = [];
+  $('img.announcement__images-item').each((i, el) => {
+    const src = (
+      $(el).attr('data-full-image') ||
+      $(el).attr('data-src') ||
+      $(el).attr('data-original') ||
+      $(el).attr('data-lazy') ||
+      $(el).attr('src')
+    )?.trim();
+    if (src && !rawImgs.includes(src)) {
+      rawImgs.push(src.replace(/-\d+x\d+(\.[a-z]+)$/i, '$1'));
+    }
+  });
+  return cacheImages(rawImgs);
+}
 
 async function run() {
   await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost/helloV1');
@@ -25,30 +46,28 @@ async function run() {
     const listing = listings[i];
     console.log(`\n[${i + 1}/${listings.length}] ${listing.url}`);
     try {
-      const result = await scrapeDetail(listing.url);
-      if (!result?.imgs?.length) {
-        console.warn('  No images returned — skipping');
+      const imgs = await extractImgs(listing.url);
+      if (!imgs.length) {
+        console.warn('  No images found — skipping');
         failed++;
-        continue;
-      }
-      // Only update if imgs changed
-      const same = JSON.stringify(result.imgs) === JSON.stringify(listing.imgs);
-      if (same) {
+      } else if (JSON.stringify(imgs) === JSON.stringify(listing.imgs)) {
         console.log('  Images unchanged — skipping');
         skipped++;
-        continue;
+      } else {
+        await db.Cars.updateOne({ _id: listing._id }, { $set: { imgs } });
+        console.log(`  Updated: ${imgs.length} image(s)`);
+        updated++;
       }
-      await db.Cars.updateOne({ _id: listing._id }, { $set: { imgs: result.imgs } });
-      console.log(`  Updated: ${result.imgs.length} image(s)`);
-      updated++;
     } catch (err) {
       console.error('  Error:', err.message);
       failed++;
     }
+    await new Promise(r => setTimeout(r, 2000));
   }
 
   console.log(`\nDone — updated ${updated}, skipped ${skipped}, failed ${failed}`);
   await mongoose.disconnect();
+  process.exit(0);
 }
 
 run().catch(console.error);
