@@ -95,8 +95,17 @@ async function scrapeDetail(srcURL) {
 
     const rawImgs = [];
     $('img.announcement__images-item').each((i, el) => {
-      const src = $(el).attr('src')?.trim();
-      if (src && !rawImgs.includes(src)) rawImgs.push(src);
+      const src = (
+        $(el).attr('data-full-image') ||
+        $(el).attr('data-src') ||
+        $(el).attr('data-original') ||
+        $(el).attr('data-lazy') ||
+        $(el).attr('src')
+      )?.trim();
+      console.log('[jacars] image src:', src?.slice(0, 100));
+      if (src && !rawImgs.includes(src)) {
+        rawImgs.push(src.replace(/-\d+x\d+(\.[a-z]+)$/i, '$1'));
+      }
     });
     const imgs = await cacheImages(rawImgs);
 
