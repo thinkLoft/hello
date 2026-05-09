@@ -102,7 +102,6 @@ async function scrapeDetail(srcURL) {
         $(el).attr('data-lazy') ||
         $(el).attr('src')
       )?.trim();
-      console.log('[jacars] image src:', src?.slice(0, 100));
       if (src && !rawImgs.includes(src)) {
         rawImgs.push(src.replace(/-\d+x\d+(\.[a-z]+)$/i, '$1'));
       }
