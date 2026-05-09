@@ -1,0 +1,64 @@
+const express = require('express');
+const router = express.Router();
+const db = require('../models/cars');
+
+const BOT_UA = /whatsapp|facebookexternalhit|facebot|twitterbot|linkedinbot|slackbot|discordbot|telegrambot|googlebot|bingbot|applebot/i;
+
+const BASE_URL = process.env.NODE_ENV === 'production'
+  ? 'https://autos876-dc045b5182e0.herokuapp.com'
+  : 'http://localhost:3000';
+
+function formatPrice(price) {
+  if (!price || price === 0) return 'Call for Pricing';
+  return new Intl.NumberFormat('en-JM', { style: 'currency', currency: 'JMD', maximumFractionDigits: 0 }).format(price);
+}
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+router.get('/cars/:slug', async (req, res, next) => {
+  if (!BOT_UA.test(req.headers['user-agent'] || '')) return next();
+
+  try {
+    const car = await db.Cars.findOne({ slug: req.params.slug, hidden: { $ne: true } }).lean();
+    if (!car) return next();
+
+    const title = escapeHtml(`${car.year} ${car.make} ${car.model} — Beego`);
+    const desc = escapeHtml(
+      [formatPrice(car.price), car.parish, car.transmission].filter(Boolean).join(' · ')
+    );
+    const image = escapeHtml(car.imgs?.[0] ?? '');
+    const url = escapeHtml(`${BASE_URL}/cars/${car.slug}`);
+
+    res.set('Content-Type', 'text/html');
+    res.send(`<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>${title}</title>
+  <meta property="og:title" content="${title}">
+  <meta property="og:description" content="${desc}">
+  ${image ? `<meta property="og:image" content="${image}">` : ''}
+  <meta property="og:url" content="${url}">
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="${title}">
+  <meta name="twitter:description" content="${desc}">
+  ${image ? `<meta name="twitter:image" content="${image}">` : ''}
+</head>
+<body>
+  <a href="${url}">${title}</a>
+</body>
+</html>`);
+  } catch (err) {
+    next(err);
+  }
+});
+
+module.exports = router;

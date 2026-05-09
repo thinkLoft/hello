@@ -11,7 +11,9 @@ import {
   updateScoringWeights,
   triggerRescore,
   triggerRefresh,
+  fetchHideReasons,
 } from '../services/api';
+import { scraperName } from '../utils/scraperNames';
 import './AdminPage.css';
 
 const WEIGHT_KEYS = ['price', 'completeness', 'mileage', 'source', 'images'];
@@ -102,6 +104,9 @@ export default function AdminPage() {
   const [weightsError, setWeightsError] = useState('');
   const [weightsSuccess, setWeightsSuccess] = useState('');
 
+  // Hide reason analytics
+  const [hideReasons, setHideReasons] = useState(null);
+
   useEffect(() => {
     fetchScraperStats()
       .then(setScraperStats)
@@ -111,6 +116,8 @@ export default function AdminPage() {
       .then(setWeights)
       .catch(() => setWeightsError('Could not load weights'))
       .finally(() => setWeightsLoading(false));
+
+    fetchHideReasons().then(setHideReasons).catch(() => {});
 
     fetch('/api/health/memory', { credentials: 'include' })
       .then((r) => r.json())
@@ -612,6 +619,34 @@ export default function AdminPage() {
           >
             {refreshLoading ? 'Refreshing…' : 'Refresh Stale Listings'}
           </button>
+        </div>
+
+        {/* Hide Reason Analytics */}
+        <div className="admin-card">
+          <h2>Hidden Listings — Reasons</h2>
+          <p className="admin-muted" style={{ marginBottom: '0.75rem' }}>
+            All hidden listings with a recorded reason, grouped by source.
+          </p>
+          {!hideReasons && <p className="admin-muted">Loading…</p>}
+          {hideReasons && hideReasons.length === 0 && (
+            <p className="admin-muted">No hidden listings with a reason recorded yet.</p>
+          )}
+          {hideReasons && hideReasons.length > 0 && (
+            <div className="scraper-stats-table">
+              <div className="scraper-stats-row scraper-stats-header">
+                <span>Reason</span>
+                <span>Source</span>
+                <span>Count</span>
+              </div>
+              {hideReasons.map((row, i) => (
+                <div key={i} className="scraper-stats-row">
+                  <span>{row._id.reason}</span>
+                  <span className="scraper-source">{scraperName(row._id.source)}</span>
+                  <span className="stat-skipped">{row.count}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Scoring Weights */}

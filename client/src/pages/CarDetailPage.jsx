@@ -211,14 +211,16 @@ export default function CarDetailPage() {
                 </a>
               </>
             )}
-            <a
-              className="car-detail__btn car-detail__btn--link"
-              href={car.url}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              View Original Listing ↗
-            </a>
+            {car.url && (
+              <a
+                className="car-detail__source-link"
+                href={car.url}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                View on {scraperName(car.user)} ↗
+              </a>
+            )}
           </div>
         </div>
       </div>

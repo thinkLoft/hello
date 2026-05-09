@@ -234,15 +234,20 @@
 
 .car-detail__btn--whatsapp:hover { opacity: 0.9; }
 
-.car-detail__btn--link {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  color: var(--color-text);
+.car-detail__source-link {
+  display: block;
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  padding: 0.35rem 0;
+  opacity: 0.65;
+  transition: opacity 0.15s;
 }
 
-.car-detail__btn--link:hover {
-  border-color: var(--color-primary);
-  color: var(--color-primary);
+.car-detail__source-link:hover {
+  opacity: 1;
+  text-decoration: underline;
 }
 
 .car-detail__revealed-number {

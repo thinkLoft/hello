@@ -439,6 +439,15 @@
   background: var(--color-primary-hover);
 }
 
+.modal__share-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.modal__share-row .modal__btn {
+  flex: 1;
+}
+
 .modal__btn--share {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
@@ -448,6 +457,33 @@
 .modal__btn--share:hover {
   border-color: var(--color-primary);
   color: var(--color-primary);
+}
+
+.modal__btn--open {
+  background: transparent;
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+}
+
+.modal__btn--open:hover {
+  border-color: var(--color-text-secondary);
+  color: var(--color-text);
+}
+
+.modal__source-link {
+  display: block;
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  padding: 0.25rem 0;
+  opacity: 0.7;
+  transition: opacity 0.15s;
+}
+
+.modal__source-link:hover {
+  opacity: 1;
+  text-decoration: underline;
 }
 
 .modal__btn--sold {

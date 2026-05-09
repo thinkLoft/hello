@@ -12,6 +12,7 @@ const carRoutes = require('./routes/cars');
 const authRoutes = require('./routes/auth');
 const statsRoutes = require('./routes/api/stats');
 const { requireAdmin } = require('./routes/auth');
+const ogPreview = require('./routes/ogPreview');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -94,6 +95,8 @@ app.use('/api', statsRoutes);
 app.use('/api', carRoutes);
 
 app.get('/api/health/memory', requireAdmin, (req, res) => res.json(MEM_LOG));
+
+app.use(ogPreview);
 
 if (process.env.NODE_ENV === 'production') {
   app.get('*', (req, res) => {

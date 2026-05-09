@@ -98,7 +98,7 @@ router.get('/all', async (req, res) => {
 
 router.get('/cars/slug/:slug', async (req, res) => {
   try {
-    const car = await db.Cars.findOne({ slug: req.params.slug }).lean();
+    const car = await db.Cars.findOne({ slug: req.params.slug, hidden: { $ne: true } }).lean();
     if (!car) return res.status(404).json({ error: 'Listing not found' });
     const [masked] = maskContacts([car]);
     res.json(masked);
@@ -265,6 +265,19 @@ router.post('/admin/backfill-images', requireAdmin, async (req, res) => {
       }
       console.log(`[backfill-images] done — ${updated}/${cars.length} listings updated`);
     })();
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/admin/hide-reasons', requireAdmin, async (req, res) => {
+  try {
+    const data = await db.Cars.aggregate([
+      { $match: { hidden: true, hideReason: { $ne: null } } },
+      { $group: { _id: { reason: '$hideReason', source: '$user' }, count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+    ]);
+    res.json(data);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

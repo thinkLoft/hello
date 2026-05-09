@@ -3,6 +3,7 @@ import './CarCard.css';
 import { useAuth } from '../context/AuthContext';
 import { scraperName } from '../utils/scraperNames';
 import DealRatingBadge from './DealRatingBadge';
+import { revealContact } from '../services/api';
 
 const formatPrice = (price) =>
   (!price || price === 0)
@@ -11,9 +12,25 @@ const formatPrice = (price) =>
 
 export default function CarCard({ car, onClick, sold }) {
   const [imgError, setImgError] = useState(false);
+  const [waLoading, setWaLoading] = useState(false);
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
   const hasImage = !imgError && car.imgs?.[0];
+
+  const handleWhatsApp = async (e) => {
+    e.stopPropagation();
+    setWaLoading(true);
+    try {
+      const { contactNumber } = await revealContact(car._id);
+      const num = contactNumber.replace(/\D/g, '');
+      const text = encodeURIComponent(`Hi, I'm interested in your ${car.year} ${car.make} ${car.model} listed on Beego.`);
+      window.open(`https://wa.me/${num}?text=${text}`, '_blank');
+    } catch {
+      // fall through — user can open the modal to contact
+    } finally {
+      setWaLoading(false);
+    }
+  };
 
   return (
     <article className={`car-card${sold ? ' car-card--sold' : ''}`} onClick={() => onClick(car)}>
@@ -64,6 +81,17 @@ export default function CarCard({ car, onClick, sold }) {
           {car.transmission && <span className="tag tag--alt">{car.transmission}</span>}
           {car.driverSide === 'Right Hand Drive' && <span className="tag tag--rhd">RHD</span>}
         </div>
+        {(car.hasContact || car.contactNumber) && (
+          <div className="car-card__actions">
+            <button
+              className="car-card__wa-btn"
+              onClick={handleWhatsApp}
+              disabled={waLoading}
+            >
+              {waLoading ? '…' : '💬 WhatsApp'}
+            </button>
+          </div>
+        )}
       </div>
     </article>
   );

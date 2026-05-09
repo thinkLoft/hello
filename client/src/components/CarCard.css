@@ -143,6 +143,34 @@
   color: #854d0e;
 }
 
+.car-card__actions {
+  margin-top: 0.5rem;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.car-card__wa-btn {
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.3rem 0.85rem;
+  border-radius: 100px;
+  border: none;
+  background: #25d366;
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
+  letter-spacing: 0.02em;
+}
+
+.car-card__wa-btn:hover:not(:disabled) {
+  background: #1ebe5d;
+}
+
+.car-card__wa-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
 .car-card--sold {
   opacity: 0.72;
 }

@@ -91,6 +91,7 @@ export default function CarModal({ car, onClose, onSold, onUpdate, onHide }) {
   const [revealedNumber, setRevealedNumber] = useState(null);
   const [revealLoading, setRevealLoading] = useState(false);
   const [revealError, setRevealError] = useState(null);
+  const [copied, setCopied] = useState(false);
 
   const handleReveal = async () => {
     setRevealLoading(true);
@@ -430,23 +431,37 @@ export default function CarModal({ car, onClose, onSold, onUpdate, onHide }) {
                     </>
                   )}
                   {car.slug && (
+                    <div className="modal__share-row">
+                      <button
+                        className="modal__btn modal__btn--share"
+                        onClick={() => {
+                          navigator.clipboard.writeText(`${window.location.origin}/cars/${car.slug}`);
+                          setCopied(true);
+                          setTimeout(() => setCopied(false), 1500);
+                        }}
+                      >
+                        {copied ? '✓ Copied!' : '🔗 Share'}
+                      </button>
+                      <a
+                        className="modal__btn modal__btn--open"
+                        href={`/cars/${car.slug}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        ↗ Open Page
+                      </a>
+                    </div>
+                  )}
+                  {car.url && (
                     <a
-                      className="modal__btn modal__btn--share"
-                      href={`/cars/${car.slug}`}
+                      className="modal__source-link"
+                      href={car.url}
                       target="_blank"
                       rel="noopener noreferrer"
                     >
-                      Share / Open Page ↗
+                      View on {scraperName(car.user)} ↗
                     </a>
                   )}
-                  <a
-                    className="modal__btn modal__btn--link"
-                    href={car.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    View Listing ↗
-                  </a>
                   {isAdmin && (
                     <>
                       <button className="modal__btn modal__btn--edit" onClick={enterEdit}>
