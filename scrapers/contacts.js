@@ -8,7 +8,7 @@ async function fetchMissingContacts() {
     contactNumber: null,
     user: 'jacars',
     posted: true,
-  }).sort({ _id: -1 }).limit(3);
+  }).sort({ _id: -1 }).limit(10);
 
   if (docs.length === 0) return;
 

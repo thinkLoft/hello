@@ -11,12 +11,13 @@ const { runScoringBatch } = require('../services/scoringService');
 
 let tickCount = 0;
 
-// Per-source schedule (in 15-min ticks). AutoAds & contacts run every tick;
-// KMS every other tick (~30 min); Puppeteer scrapers every 4th tick (~60 min).
+// Per-source schedule (in 15-min ticks). AutoAds & KMS run without Puppeteer;
+// contacts/JaCars/JCO require Puppeteer and are gated by ENABLE_PUPPETEER.
+// contacts runs every 2nd tick (~30 min); Puppeteer scrapers every 4th tick (~60 min).
 const SOURCE_TICK_INTERVAL = {
   autoadsja: 1,
-  contacts:  1,
   kms:       2,
+  contacts:  2,
   jacars:    4,
   jamaicaonlineclassifieds: 4,
 };
@@ -33,13 +34,13 @@ const job = new CronJob(
     const phase1Tasks = [];
     if (shouldRun('autoadsja')) phase1Tasks.push(autoadsChecker(process.env.SITE1));
     if (shouldRun('kms'))       phase1Tasks.push(kmsScrape(process.env.SITE4));
-    if (shouldRun('contacts'))  phase1Tasks.push(fetchMissingContacts());
     const phase1 = await Promise.allSettled(phase1Tasks);
 
-    // Phase 2: Puppeteer scrapers — skipped unless ENABLE_PUPPETEER=true (not set on Heroku Basic)
+    // Phase 2: Puppeteer scrapers — skipped unless ENABLE_PUPPETEER=true
     const puppeteerEnabled = process.env.ENABLE_PUPPETEER === 'true';
     const runJacars = puppeteerEnabled && shouldRun('jacars');
     const runJco = puppeteerEnabled && shouldRun('jamaicaonlineclassifieds');
+    const runContacts = puppeteerEnabled && shouldRun('contacts');
 
     const jacarsResult = runJacars
       ? await jacarsScrape().then(
@@ -57,7 +58,14 @@ const job = new CronJob(
       : { status: 'skipped' };
     if (runJco) await closeBrowser();
 
-    const results = [...phase1, jacarsResult, jcoResult];
+    const contactsResult = runContacts
+      ? await fetchMissingContacts().then(
+          (v) => ({ status: 'fulfilled', value: v }),
+          (e) => { console.error('[Contacts] error:', e.message); return { status: 'rejected' }; }
+        )
+      : { status: 'skipped' };
+
+    const results = [...phase1, jacarsResult, jcoResult, contactsResult];
 
     for (const result of results) {
       if (result.status === 'fulfilled' && result.value?.source) {
