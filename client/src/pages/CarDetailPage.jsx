@@ -155,7 +155,7 @@ export default function CarDetailPage() {
             <h1 className="car-detail__title">{ogTitle}</h1>
             <div className="car-detail__price-row">
               <p className="car-detail__price">{formatPrice(car.price)}</p>
-              {car.score != null && (isAdmin || car.comparableCount >= 10) && (
+              {isAdmin && car.score != null && (
                 <DealRatingBadge score={car.score} size="md" showScore={isAdmin} />
               )}
             </div>
