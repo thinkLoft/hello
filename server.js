@@ -153,4 +153,8 @@ async function start() {
   await connectDb();
 }
 
-start();
+if (require.main === module) {
+  start();
+}
+
+module.exports = app;
