@@ -5,11 +5,23 @@ const { scrape: jcoScrape } = require('../scrapers/jco');
 const { scrape: kmsScrape } = require('../scrapers/kms');
 const { fetchMissingContacts } = require('../scrapers/contacts');
 const { closeBrowser } = require('../scrapers/browser');
-const { refreshListings } = require('./refreshListings');
+const { refreshListings, refreshPuppeteerListings } = require('./refreshListings');
 const { persistScraperStats } = require('./persistScraperStats');
 const { runScoringBatch } = require('../services/scoringService');
 
 let tickCount = 0;
+
+// Per-source schedule (in 15-min ticks). AutoAds & contacts run every tick;
+// KMS every other tick (~30 min); Puppeteer scrapers every 4th tick (~60 min).
+const SOURCE_TICK_INTERVAL = {
+  autoadsja: 1,
+  contacts:  1,
+  kms:       2,
+  jacars:    4,
+  jamaicaonlineclassifieds: 4,
+};
+
+const shouldRun = (source) => tickCount % SOURCE_TICK_INTERVAL[source] === 0;
 
 const job = new CronJob(
   '0 */15 * * * *',
@@ -17,30 +29,33 @@ const job = new CronJob(
     tickCount++;
     console.log(`[${new Date().toISOString()}] Cron job started (tick ${tickCount})`);
 
-    // Phase 1: non-Puppeteer scrapers run in parallel
-    const phase1 = await Promise.allSettled([
-      autoadsChecker(process.env.SITE1),
-      kmsScrape(process.env.SITE4),
-      fetchMissingContacts(),
-    ]);
+    // Phase 1: non-Puppeteer scrapers
+    const phase1Tasks = [];
+    if (shouldRun('autoadsja')) phase1Tasks.push(autoadsChecker(process.env.SITE1));
+    if (shouldRun('kms'))       phase1Tasks.push(kmsScrape(process.env.SITE4));
+    if (shouldRun('contacts'))  phase1Tasks.push(fetchMissingContacts());
+    const phase1 = await Promise.allSettled(phase1Tasks);
 
     // Phase 2: Puppeteer scrapers — skipped unless ENABLE_PUPPETEER=true (not set on Heroku Basic)
     const puppeteerEnabled = process.env.ENABLE_PUPPETEER === 'true';
-    const jacarsResult = puppeteerEnabled
+    const runJacars = puppeteerEnabled && shouldRun('jacars');
+    const runJco = puppeteerEnabled && shouldRun('jamaicaonlineclassifieds');
+
+    const jacarsResult = runJacars
       ? await jacarsScrape().then(
           (v) => ({ status: 'fulfilled', value: v }),
           (e) => { console.error('[JaCars] error:', e.message); return { status: 'rejected' }; }
         )
       : { status: 'skipped' };
-    if (puppeteerEnabled) await closeBrowser();
+    if (runJacars) await closeBrowser();
 
-    const jcoResult = puppeteerEnabled
+    const jcoResult = runJco
       ? await jcoScrape(process.env.SITE3).then(
           (v) => ({ status: 'fulfilled', value: v }),
           (e) => { console.error('[JCO] error:', e.message); return { status: 'rejected' }; }
         )
       : { status: 'skipped' };
-    if (puppeteerEnabled) await closeBrowser();
+    if (runJco) await closeBrowser();
 
     const results = [...phase1, jacarsResult, jcoResult];
 
@@ -66,4 +81,24 @@ const job = new CronJob(
   true
 );
 
+// Off-peak Puppeteer refresh: 04:00 JM time (= 09:00 UTC) daily.
+// Runs JaCars + JCO detail re-scrapes sequentially with closeBrowser between.
+const puppeteerRefreshJob = new CronJob(
+  '0 0 9 * * *',
+  async function () {
+    if (process.env.ENABLE_PUPPETEER !== 'true') return;
+    console.log(`[${new Date().toISOString()}] Off-peak Puppeteer refresh starting`);
+    try {
+      const result = await refreshPuppeteerListings();
+      console.log('[refresh-puppeteer] result:', JSON.stringify(result));
+    } catch (err) {
+      console.error('[refresh-puppeteer] error:', err.message);
+    }
+  },
+  null,
+  true,
+  'UTC'
+);
+
 module.exports = job;
+module.exports.puppeteerRefreshJob = puppeteerRefreshJob;
