@@ -240,17 +240,32 @@ router.post('/cars/:id/rescore', requireAdmin, async (req, res) => {
 // Backfill existing listings: upload any non-Cloudinary imgs[] entries to Cloudinary.
 // Processes in batches of 10 listings to respect API rate limits.
 // Safe to call multiple times — cacheImages() skips already-Cloudinary URLs.
+async function setBackfillStatus(value) {
+  await db.Settings.findOneAndUpdate(
+    { key: 'backfillImagesStatus' },
+    { $set: { value } },
+    { upsert: true }
+  );
+}
+
 router.post('/admin/backfill-images', requireAdmin, async (req, res) => {
   try {
     const cars = await db.Cars.find({
       imgs: { $elemMatch: { $not: /cloudinary\.com/ } },
     }).select('_id imgs').lean();
 
+    const startedAt = new Date();
+    await setBackfillStatus({
+      total: cars.length, processed: 0, updated: 0,
+      startedAt, finishedAt: null, lastUpdate: startedAt,
+    });
+
     res.json({ started: true, total: cars.length });
 
     // Run in background after response so the HTTP call doesn't time out
     (async () => {
       let updated = 0;
+      let processed = 0;
       const BATCH = 10;
       for (let i = 0; i < cars.length; i += BATCH) {
         const batch = cars.slice(i, i + BATCH);
@@ -262,9 +277,34 @@ router.post('/admin/backfill-images', requireAdmin, async (req, res) => {
             updated++;
           }
         }));
+        processed += batch.length;
+        await setBackfillStatus({
+          total: cars.length, processed, updated,
+          startedAt, finishedAt: null, lastUpdate: new Date(),
+        });
       }
+      await setBackfillStatus({
+        total: cars.length, processed, updated,
+        startedAt, finishedAt: new Date(), lastUpdate: new Date(),
+      });
       console.log(`[backfill-images] done — ${updated}/${cars.length} listings updated`);
-    })();
+    })().catch(async (err) => {
+      console.error('[backfill-images] failed:', err.message);
+      await setBackfillStatus({
+        total: cars.length, processed: 0, updated: 0,
+        startedAt, finishedAt: new Date(), lastUpdate: new Date(),
+        error: err.message,
+      }).catch(() => {});
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/admin/backfill-images/status', requireAdmin, async (req, res) => {
+  try {
+    const doc = await db.Settings.findOne({ key: 'backfillImagesStatus' }).lean();
+    res.json(doc?.value ?? null);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

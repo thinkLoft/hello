@@ -12,6 +12,8 @@ import {
   triggerRescore,
   triggerRefresh,
   fetchHideReasons,
+  triggerBackfillImages,
+  fetchBackfillStatus,
 } from '../services/api';
 import { scraperName } from '../utils/scraperNames';
 import './AdminPage.css';
@@ -107,6 +109,13 @@ export default function AdminPage() {
   // Hide reason analytics
   const [hideReasons, setHideReasons] = useState(null);
 
+  // Backfill images
+  const [backfillStatus, setBackfillStatus] = useState(null);
+  const [backfillError, setBackfillError] = useState('');
+  const [backfillStarting, setBackfillStarting] = useState(false);
+
+  const isBackfillActive = backfillStatus && !backfillStatus.finishedAt && !backfillStatus.error;
+
   useEffect(() => {
     fetchScraperStats()
       .then(setScraperStats)
@@ -119,11 +128,35 @@ export default function AdminPage() {
 
     fetchHideReasons().then(setHideReasons).catch(() => {});
 
+    fetchBackfillStatus().then(setBackfillStatus).catch(() => {});
+
     fetch('/api/health/memory', { credentials: 'include' })
       .then((r) => r.json())
       .then(setMemLog)
       .catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (!isBackfillActive) return;
+    const id = setInterval(() => {
+      fetchBackfillStatus().then(setBackfillStatus).catch(() => {});
+    }, 5000);
+    return () => clearInterval(id);
+  }, [isBackfillActive]);
+
+  const handleStartBackfill = async () => {
+    setBackfillError('');
+    setBackfillStarting(true);
+    try {
+      await triggerBackfillImages();
+      const status = await fetchBackfillStatus();
+      setBackfillStatus(status);
+    } catch (err) {
+      setBackfillError(err.message);
+    } finally {
+      setBackfillStarting(false);
+    }
+  };
 
   const handleLogout = async () => {
     await logout();
@@ -647,6 +680,48 @@ export default function AdminPage() {
               ))}
             </div>
           )}
+        </div>
+
+        {/* Cloudinary Image Backfill */}
+        <div className="admin-card">
+          <h2>Cloudinary Image Backfill</h2>
+          <p className="admin-muted" style={{ marginBottom: '0.75rem' }}>
+            Re-uploads any non-Cloudinary images on existing listings. Idempotent — safe to run anytime.
+          </p>
+          {backfillError && <div className="admin-error">{backfillError}</div>}
+          {backfillStatus && (
+            <div className="admin-muted" style={{ marginBottom: '0.75rem', fontSize: '0.9rem' }}>
+              <div>Last run: {formatDate(backfillStatus.startedAt)}</div>
+              {backfillStatus.total > 0 && (
+                <>
+                  <div style={{ margin: '0.5rem 0', height: '8px', background: '#eee', borderRadius: '4px', overflow: 'hidden' }}>
+                    <div style={{
+                      width: `${Math.round((backfillStatus.processed / backfillStatus.total) * 100)}%`,
+                      height: '100%',
+                      background: backfillStatus.finishedAt ? '#4caf50' : '#2196f3',
+                      transition: 'width 0.3s',
+                    }} />
+                  </div>
+                  <div>
+                    {backfillStatus.processed} / {backfillStatus.total} processed
+                    {' · '}{backfillStatus.updated} updated
+                    {backfillStatus.finishedAt
+                      ? ` · finished ${formatDate(backfillStatus.finishedAt)}`
+                      : ' · running…'}
+                  </div>
+                </>
+              )}
+              {backfillStatus.error && <div className="admin-error">Error: {backfillStatus.error}</div>}
+            </div>
+          )}
+          <button
+            className="admin-submit-btn"
+            onClick={handleStartBackfill}
+            disabled={backfillStarting || isBackfillActive}
+            style={{ marginTop: 0 }}
+          >
+            {isBackfillActive ? 'Running…' : backfillStarting ? 'Starting…' : 'Run Backfill'}
+          </button>
         </div>
 
         {/* Scoring Weights */}

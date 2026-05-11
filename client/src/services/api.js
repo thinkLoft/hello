@@ -50,6 +50,10 @@ export const triggerScrape = (source) =>
   apiFetch(`/scrape/run?source=${encodeURIComponent(source)}`, { method: 'POST' });
 export const fetchCarBySlug = (slug) => apiFetch(`/cars/slug/${slug}`);
 export const fetchHideReasons = () => apiFetch('/admin/hide-reasons');
+export const triggerBackfillImages = () =>
+  apiFetch('/admin/backfill-images', { method: 'POST' });
+export const fetchBackfillStatus = () =>
+  apiFetch('/admin/backfill-images/status');
 export const fetchScoringWeights = () => apiFetch('/scoring-weights');
 export const updateScoringWeights = (weights) =>
   apiFetch('/scoring-weights', {
