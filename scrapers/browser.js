@@ -63,4 +63,4 @@ async function closeBrowser() {
   }
 }
 
-module.exports = { fetchPage, closeBrowser };
+module.exports = { fetchPage, closeBrowser, getBrowser };

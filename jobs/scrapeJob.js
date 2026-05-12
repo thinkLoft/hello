@@ -64,6 +64,7 @@ const job = new CronJob(
           (e) => { console.error('[Contacts] error:', e.message); return { status: 'rejected' }; }
         )
       : { status: 'skipped' };
+    if (runContacts) await closeBrowser();
 
     const results = [...phase1, jacarsResult, jcoResult, contactsResult];
 
